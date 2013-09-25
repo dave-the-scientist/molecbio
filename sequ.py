@@ -37,7 +37,7 @@ Functions:
        sequence into a fasta format, returns as a string.
     -- parsefasta(textobj) -- Takes a file object or list of text lines and
        returns a list of Sequence objects.
-    -- loadfasta(filepath) -- Takes a file path string, returns list of Sequences.
+    -- loadfasta(filepath, onlyThese=[]) -- Takes a file path string, returns list of Sequences.
     -- savefasta(seqList, filepath) -- Saves list of Sequences to filepath.
     -- cleanfasta(filepath) -- Overwrites sequences at filepath, formatting them.
     
@@ -137,7 +137,7 @@ def parsefasta(textobj, onlyThese=None):
         seqs.append(Sequence(name=curName, description=curDescript,
                              sequence=''.join(buff)))
     return seqs
-def loadfasta(filepath, onlyThese=None):
+def loadfasta(filepath, onlyThese=[]):
     """Returns a list of Sequence objects from the filepath."""
     with open(filepath, 'rb') as f:
         seqs = parsefasta(f, onlyThese)

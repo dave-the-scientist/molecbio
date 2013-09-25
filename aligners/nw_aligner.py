@@ -2,11 +2,14 @@
 """
 import itertools, operator
 from molecbio import sequ, blosum
-import nwmodule
+try:
+    import nwmodule
+except ImportError:
+    nwmodule = None
 
-class Needleman(object):
-    """Performs a Needleman-Wunsch global alignment on 2 sequences. Implemented
-    in C, so about 100x faster than the python version.
+class Needleman_base(object):
+    """Performs a Needleman-Wunsch global alignment on 2 sequences.
+    
     The align() function ensures the sequences are properly formatted, but this
     can be ~10% slower if they're already formatted, and takes twice as long if
     they're Sequence objects. Faster to format the sequences beforehand, and then
@@ -28,30 +31,29 @@ class Needleman(object):
     def align_raw(self, seq1, seq2):
         return self._align(seq1, seq2)
 
-    def pairwiseAlign(self, seqList):
+    def pairwise_align(self, seqList):
         """Aligns each sequence to each other in the list, returning a list of
         tuples containing the alignments."""
         return list(self._pairwiseAlignGen(seqList))
 
-    def calcPercentIdentity(self, seq1, seq2):
+    def percent_identity(self, seq1, seq2):
         """Runs an alignment, returning the percent identity between the sequences."""
-        return self._percentIdentity(self.algin(seq1, seq2))
+        return self._percentIdentity(*self.align(seq1, seq2))
 
-    def calcPairwisePercentIdentity(self, seqList):
-        return [self._percentIdentity(seqs) for seqs in self._pairwiseAlignGen(seqList)]
+    def pairwise_percent_identity(self, seqList):
+        return [self._percentIdentity(*seqs) for seqs in self._pairwiseAlignGen(seqList)]
 
-    def oneVsAllIdentity(self, seq1, seqList):
+    def one_vs_all_identity(self, seq1, seqList):
         seq1 = self._filterSeq(seq1)
         seqList = self._filterSeqList(seqList)
-        return [self._percentIdentity(self._align(seq1,seq2)) for seq2 in seqList]
+        return [self._percentIdentity(*self._align(seq1,seq2)) for seq2 in seqList]
 
     # # # # #  Overwritable Methods  # # # # #
     def _align(self, seq1, seq2):
         """Returns the aligned sequences as a tuple of strings."""
-        return nwmodule.align(seq1, seq2, self.matchscore,
-                              self.mismatchscore, self.gapscore)
+        pass
 
-    # # # # #  Class Private Methods  # # # # #
+    # # # # #  Base Class Private Methods  # # # # #
     def _filterSeq(self, seq):
         if type(seq) == sequ.Sequence: seq = seq.seq
         else: seq = str(seq)
@@ -67,14 +69,25 @@ class Needleman(object):
     def _percentIdentity(self, align1, align2):
         matches = map(operator.eq, align1, align2)
         return sum(matches) * 100.0 / len(matches)
-    
 
-class PyNeedleman(Needleman):
-    """Performs a Needleman-Wunsch global alignment on 2 sequences."""
+
+class CNeedleman(Needleman_base):
+    """Implemented in C, and is about 100x faster than the python version."""
     def __init__(self, match=2, mismatch=-1, gap=-1,
                  score_matrix=blosum.blosum62, blosum_gap_open=-10, blosum_gap=-1):
-        Needleman.__init__(self, match, mismatch, gap, score_matrix,
-                           blosum_gap_open, blosum_gap)
+        Needleman_base.__init__(self, match, mismatch, gap, score_matrix,
+                                blosum_gap_open, blosum_gap)
+    # # # # #  Overwritable Methods  # # # # #
+    def _align(self, seq1, seq2):
+        return nwmodule.align(seq1, seq2, self.matchscore,
+                              self.mismatchscore, self.gapscore)
+    
+class PyNeedleman(Needleman_base):
+    """Implemented in Python."""
+    def __init__(self, match=2, mismatch=-1, gap=-1,
+                 score_matrix=blosum.blosum62, blosum_gap_open=-10, blosum_gap=-1):
+        Needleman_base.__init__(self, match, mismatch, gap, score_matrix,
+                                blosum_gap_open, blosum_gap)
         # # #  Private variables
         self._scores = []
         self._paths = []
@@ -85,7 +98,6 @@ class PyNeedleman(Needleman):
         self._paths = []
         self.__generateMatrices(seq1, seq2)
         align1, align2 = self.__backtrack(seq1, seq2)
-        
         return align1, align2
 
     # # # # #  Private Methods  # # # # #
@@ -143,5 +155,8 @@ class PyNeedleman(Needleman):
             align2.append(c2)
         return ''.join(reversed(align1)), ''.join(reversed(align2))
         
-
-
+if nwmodule:
+    Needleman = CNeedleman
+else:
+    print "nwmodule.c was not correctly compiled, so the Python implementation will be used instead."
+    Needleman = PyNeedleman

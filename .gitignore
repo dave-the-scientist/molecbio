@@ -1,7 +1,7 @@
 *.py[cod]
 
-# C extensions
-*.so
+# Option files
+*.ini
 
 # Packages
 *.egg
