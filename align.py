@@ -71,6 +71,30 @@ def saveas_fasta(seqList, filepath):
     seqStr = '\n'.join(seq.fasta() for seq in seqList)
     with open(filepath, 'wb') as f:
         f.write(seqStr)
+def saveas_phylip(seqList, filepath):
+    """Formats for use with PhyML, which is a little different than
+    standard PHYLIP format when it comes to name conventions."""
+    perLine = 80
+    seqLen = len(seqList[0].seq)
+    nameLen = 0
+    names = []
+    sequences = []
+    for seq in seqList:
+        name = seq.header
+        name = '_'.join(name.strip().split())
+        name = name.replace('(','').replace(')','').replace(',','').replace(':','').replace('.','')
+        names.append(name)
+        if len(name) > nameLen: nameLen = len(name)
+        sequences.append([seq.seq[i:i+perLine] for i in range(0,seqLen,perLine)])
+    nameLen = min(nameLen, 100)
+    fmtstr = '%%-%is %%s' % nameLen
+    for i, name in enumerate(names):
+        sequences[i][0] = fmtstr % (name[:nameLen], sequences[i][0])
+    sequences = ['\n'.join(block)+'\n' for block in zip(*sequences)]
+    buff = ['%i %i' % (len(names), seqLen)]
+    buff.extend(sequences)
+    with open(filepath, 'wb') as f:
+        f.write('\n'.join(buff))
     
 def saveas_binned(filepath, scores, thresholds=(3.33333, 6.66666)):
     """Saves list of scores as spreadsheet-readable bins.

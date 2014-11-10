@@ -1,7 +1,7 @@
 #include <Python.h>
 
-static char module_docstring[] = "A docstring.";
-static char align_docstring[] = "A docstring.";
+static char module_docstring[] = "A docstring for the module.";
+static char align_docstring[] = "A docstring for our function.";
 
 static PyObject* nw_align(PyObject* self, PyObject* args) {
   // Read in arguments.
