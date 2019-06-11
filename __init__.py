@@ -9,9 +9,9 @@ Several modules written to handle molecular biology tasks.
    rosetta -- A package to run and parse various rosetta programs.
      Note that this package is not implicitly loaded with molecbio.
 """
-__version__ = '0.3'
+__version__ = '0.5'
 __author__ = 'Dave Curran (curran.dave.m@gmail.com)'
-__all__ = ['PDB', 'Cluster', 'sequ', 'blosum', 'align', 'rosetta', 'aligners']
+__all__ = ['PDB', 'Cluster', 'sequ', 'blosum', 'align', 'rosetta', 'aligners', 'phylo']
 
 try: import Cluster
 except ImportError:
