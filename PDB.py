@@ -28,6 +28,8 @@ Functions:
     -- tripresfromdata(pdbdata, fillerChar='-') -- Extract protein sequence from pdb.
     -- renumber(original, new, chainID, difference) -- Renumber the residues.
     -- renumberdata(pdbdata, chainID, difference) -- Renumber the residues.
+    -- mapconservation(pdbfile, alignmentfasta, newpdbfile) -- Replace the b-factors with alignment quality.
+    -- pdbqualityscores((pdbdata, alignmentfasta)) -- Replace the b-factors with alignment quality.
 """
 import os, sys
 # # # # # # # # # #  Variables  # # # # # # # # # #
@@ -58,7 +60,7 @@ def savepdb(pdbdata, filename):
 def cleanpdb(original, new, noH=False, prefixes=['ATOM','TER']):
     """Filters the original .pdb file and saves it as 'new'. Returns boolean runcode.
 
-    noH -- Remove out all hydrogen atoms (default False).
+    noH -- Remove all hydrogen atoms (default False).
     prefixes -- A list of strings indicating lines to keep (default ['ATOM','TER']).
     """
     if not os.path.isfile(original): return False
@@ -200,6 +202,55 @@ def renumberdata(pdbdata, chainID, difference):
         lines.append(line)
     return lines
 
+def mapconservation(pdbfile, alignmentfasta, newpdbfile):
+    """Replaces the b-factors of the pdbfile with the quality scores from the
+    given alignment, saving the structure as newpdbfile."""
+    pdbdata = parsepdb(pdbfile)
+    chain, scores = pdbqualityscores(pdbdata, alignmentfasta)
+    buff = []
+    scoresIter = iter(scores)
+    maxScore, prevRes, curQual = max(scores), -1, 10.0
+    for line in pdbdata:
+        if not line.startswith('ATOM'):
+            buff.append(line)
+            continue
+        curChain = line[21]
+        if curChain != chain:
+            buff.append(line)
+            continue
+        resNum = int(line[22:26])
+        if resNum > prevRes:
+            prevRes = resNum
+            curQual = maxScore - scoresIter.next()
+        buff.append('%s%6.2f%s' % (line[:60], curQual, line[66:]))
+    savepdb(buff, newpdbfile)
+
+def pdbqualityscores(pdbdata, alignmentfasta):
+    """Returns a list of floats, where each is the calculated alignment quality
+    of one of the residues of the pdb structure. Only the first chain in the
+    structure is modified."""
+    import align, aligners
+    pdbseq = resfromdata(pdbdata, '-')[0]
+    pdbchain = pdbseq[0]
+    pdbseq = ''.join(pdbseq[1:])
+    seqs = align.open_fasta(alignmentfasta)
+    quality = align.quality(seqs)
+    aligner = aligners.Needleman()
+    identity, sequence = 0, None
+    identities = aligner.one_vs_all_identity(pdbseq, [seq.seq for seq in seqs])
+    for iden, seq in zip(identities, seqs):  # Find closest sequence in alignment
+        if iden > identity:
+            identity = iden
+            sequence = seq
+    aln = aligner.align(pdbseq, sequence.seq)
+    pdbseqIter, seqIter = iter(aln[0]), iter(aln[1])
+    pdbscores = []
+    for qscore, alnres in zip(quality, sequence.seq):
+        if alnres == '-': continue  # Closest sequence not in that alignment column
+        pdbres, seqres = pdbseqIter.next(), seqIter.next()
+        if seqres == '-': pdbscores.append(0.0)  # Closest sequence has gap compared to pdb sequence
+        elif pdbres != '-': pdbscores.append(qscore)  # Pdb sequence has missing residue
+    return pdbchain, pdbscores
 
 # # # # #  Command Line  # # # # #
 __help__ = """
