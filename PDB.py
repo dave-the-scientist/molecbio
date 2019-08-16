@@ -221,7 +221,11 @@ def mapconservation(pdbfile, alignmentfasta, newpdbfile):
         resNum = int(line[22:26])
         if resNum > prevRes:
             prevRes = resNum
-            curQual = maxScore - scoresIter.next()
+            try:
+                curQual = maxScore - scoresIter.next()
+            except StopIteration:
+                print('Error: the pdb sequence is longer than the calculated alignment scores. This usually means the pdb sequence is not present in the alignment file.')
+                return
         buff.append('%s%6.2f%s' % (line[:60], curQual, line[66:]))
     savepdb(buff, newpdbfile)
 
@@ -243,7 +247,7 @@ def pdbqualityscores(pdbdata, alignmentfasta):
             identity = iden
             sequence = seq
     aln = aligner.align(pdbseq, sequence.seq)
-    pdbseqIter, seqIter = iter(aln[0]), iter(aln[1])
+    pdbseqIter, seqIter = iter(aln[0].replace('?','-')), iter(aln[1].replace('?','-'))
     pdbscores = []
     for qscore, alnres in zip(quality, sequence.seq):
         if alnres == '-': continue  # Closest sequence not in that alignment column
