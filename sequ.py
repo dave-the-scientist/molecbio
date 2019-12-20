@@ -10,11 +10,11 @@ Class:
                 allowedChars='-_*?', onlyUpper=True) -- An objected created
        to manipulate and store sequence data. Several optional arguments can
        be given on instantiation.
-       
+
        Attributes:
        -- name -- The name as a string.
        -- sequence / seq -- The sequence as a string.
-       
+
        Methods:
        -- translate() -- Returns DNA-amino acid translation as a string.
        -- invcomplement() -- Returns inverse complement of the DNA sequence.
@@ -33,14 +33,14 @@ Variables:
 
 Functions:
     Fasta functions:
-    -- fasta(sequence, line=60, spaces=True, numbers=True) -- Converts some
+    -- fasta(sequence, line=60, spaces=False, numbers=False) -- Converts some
        sequence into a fasta format, returns as a string.
     -- parsefasta(textobj) -- Takes a file object or list of text lines and
        returns a list of Sequence objects.
     -- loadfasta(filepath, onlyThese=[]) -- Takes a file path string, returns list of Sequences.
     -- savefasta(seqList, filepath) -- Saves list of Sequences to filepath.
     -- cleanfasta(filepath) -- Overwrites sequences at filepath, formatting them.
-    
+
     Data functions:
     -- translate(sequence, unknownChar='?', stopcodonChar='_') -- Takes a string
        or list of strings, returns amino acid translation.
@@ -69,23 +69,23 @@ full_complement = {
 'A':'T','T':'A','C':'G','G':'C','U':'A',
 'R':'Y','Y':'R','W':'S','S':'W','M':'K','K':'M',
 'B':'V','V':'B','H':'D','D':'H' }
-codontable = {  
-    'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',  
-    'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',  
-    'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',  
-    'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',  
-    'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',  
-    'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',  
-    'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',  
-    'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',  
-    'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',  
-    'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',  
-    'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',  
-    'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',  
-    'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',  
-    'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',  
-    'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',  
-    'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W',  
+codontable = {
+    'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+    'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+    'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+    'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
+    'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+    'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+    'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+    'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+    'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+    'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+    'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+    'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+    'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+    'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+    'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+    'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W',
     }
 """Dictionary to translate DNA into amino acids."""
 peptide3to1 = {
@@ -98,7 +98,7 @@ peptide3to1 = {
 """Dictionary to change 3-letter amino acid codes to 1-letter."""
 
 # # # # # # # # # #  I/O Functions  # # # # # # # # # #
-def fasta(sequence, line=60, spaces=True, numbers=True):
+def fasta(sequence, line=60, spaces=False, numbers=False):
     """FASTA-formats some sequence string."""
     if not spaces: seq = '\n'.join(__chunksequence(sequence, line))
     else:
@@ -142,7 +142,7 @@ def loadfasta(filepath, onlyThese=[]):
     with open(filepath, 'rb') as f:
         seqs = parsefasta(f, onlyThese)
     return seqs
-def savefasta(seqList, filepath, line=60, spaces=True, numbers=True):
+def savefasta(seqList, filepath, line=60, spaces=False, numbers=False):
     """Saves the given list of Sequences to filepath in fasta format."""
     seqStr = '\n'.join(seq.fasta(line, spaces, numbers) for seq in seqList)
     with open(filepath, 'wb') as f:
@@ -212,7 +212,7 @@ def calcIdentity(sequence1, sequence2):
     numStr = '%i / %i' % (matches, total)
     percent = float(matches) / total * 100
     return percent, numStr
-            
+
 
 # # # # # # # # # #  Private Functions  # # # # # # # # # #
 def __chunksequence(sequence, chunksize, only_complete=False):
@@ -257,13 +257,13 @@ class Sequence(object):
         self.name = name
         self.description = description
         self.sequence = sequence
-        
+
     # # # # #  Public Methods  # # # # #
     def translate(self):
         return translate(self)
     def invcomplement(self):
         return invcomplement(self)
-    def fasta(self, line=60, spaces=True, numbers=True):
+    def fasta(self, line=60, spaces=False, numbers=False):
         return '>%s\n%s\n' % (self.header, fasta(self, line, spaces, numbers))
     def append(self, sequence):
         self.seq += sequence
@@ -295,7 +295,7 @@ class Sequence(object):
         return self.sequence.rindex(sub, *args)
 
     # # # # #  Private Methods  # # # # #
-    
+
     # # # # #  Under-the-hood Methods  # # # # #
     def __getName(self): return self.__name
     def __setName(self, name):
