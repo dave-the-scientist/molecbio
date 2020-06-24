@@ -3,13 +3,13 @@
 Purpose: To parse the XML output of some BLAST run, collecting related results and grouping them together in a readable format. Also allows filtering of the results based on several common metrics, and saving the filtered results to a file.
 Author: Dave Curran
 Version: 0.1
-Was written for the output of BLAST v2.9.0.
+Was written for the output of BLAST v2.10.0.
 To get the correct output from the command line version of BLAST use -outfmt 5; from the online version of BLAST select "Download All", and then "XML".
 Note: hits that are common to multiple queries will be merged into a single object based on their given IDs. If the subject sequences are unnamed, this will not happen. If multiple query or subject sequences share the same ID but are actually different, they will be inappropriately combined. If multiple copies of query or subject sequences have been included, they will be ignored.
 """
 
 # TODO:
-# - This works for blastp (or, it will). Modify so can be used with the other flavours as well.
+# - This works for blastp. Modify so can be used with the other flavours as well.
 # - Create custom errors, replace all exit() calls with them.
 
 import os
@@ -36,7 +36,6 @@ class BlastResults(object):
         self.hits = OrderedDict()
         # #  Private attributes  # #
         self.root = None
-        self.unnamed_query = None
         self.filter_criteria = set(["max_e_value", "min_identity", "min_positive", "min_query_coverage", "min_hit_coverage", "max_gap_coverage", "min_hsp_length", "min_bitscore", "min_score"])
         self.hsp_keys = set(["e_value", "percent_identity", "percent_positive", "query_coverage", "hit_coverage", "gap_coverage", "hsp_length", "bit_score", "score"])
         self.best_is_low = set(["e_value", "gap_coverage"])
@@ -61,9 +60,23 @@ class BlastResults(object):
             if len(matches) > 0:
                 seqs.append((query, matches))
         return seqs
-    def get_queries_per_hit(self):
-        # Returns dict of BlastSequence objects {query: [hits...], }
-        pass
+    def get_queries_per_hit(self, max_e_value=None, min_identity=None, min_positive=None, min_query_coverage=None, min_hit_coverage=None, max_gap_coverage=None, min_hsp_length=None, min_bitscore=None, min_score=None, num_matches=None, sort=None):
+        # Returns a list of BlastSequence objects [(hit1, OrderedDict{query1:[hsp1, hsp2, ...], ...}), ...]. The number of queries in the OrderedDict is specified by 'num_matches', and the order by 'sort'.
+        seqs = []
+        for hit in self.hits.values():
+            matches = OrderedDict()
+            hsps = hit.filter_hsps(max_e_value=max_e_value, min_identity=min_identity, min_positive=min_positive, min_query_coverage=min_query_coverage, min_hit_coverage=min_hit_coverage, max_gap_coverage=max_gap_coverage, min_hsp_length=min_hsp_length, min_bitscore=min_bitscore, min_score=min_score)
+            if sort != None:
+                hsps.sort(key=lambda hsp: getattr(hsp, sort))
+                if sort not in self.best_is_low:
+                    hsps.reverse()
+            for hsp in hsps:
+                if num_matches != None and len(matches) == num_matches and hsp.query not in matches:
+                    break
+                matches.setdefault(hsp.query, []).append(hsp)
+            if len(matches) > 0:
+                seqs.append((hit, matches))
+        return seqs
     def get_all_hits(self, max_e_value=None, min_identity=None, min_positive=None, min_query_coverage=None, min_hit_coverage=None, max_gap_coverage=None, min_hsp_length=None, min_bitscore=None, min_score=None, sort=None):
         """Returns a list of all query BlastSequence objects that have at least 1 HSP that satisfies all of the given filter criteria. The 'max_e_value', 'min_hsp_length', 'min_bitscore', and 'min_score' criteria all take float values; 'min_identity', 'min_positive', and 'max_gap_coverage' all take percent values (floats between 0 and 100) and are calculated over the length of the HSP; 'min_query_coverage' and 'min_hit_coverage' take percent values (floats between 0 and 100) indicating the minimum portion of the total query or hit length that must be aligned in an HSP. If 'sort' is not specified the returned list will be in the same order as the results file, otherwise it must be a single string from: "max_e_value", "min_identity", "min_positive", "min_query_coverage", "min_hit_coverage", "max_gap_coverage", "min_hsp_length", "min_bitscore", "min_score"."""
         hits = []
@@ -114,10 +127,6 @@ class BlastResults(object):
             exit()
         self.blast_program = self.root.find('BlastOutput_version').text
         blast_type = self.root.find('BlastOutput_program').text
-        if blast_type == 'blastp':
-            self.unnamed_query = 'unnamed protein product'
-        elif blast_type == 'tblastn':
-            self.unnamed_query = 'unnamed protein product'
         self.parse_run_parameters()
         iterations = self.root.find('BlastOutput_iterations')
         if iterations == None:
@@ -125,7 +134,6 @@ class BlastResults(object):
             exit()
         self.queries = OrderedDict()
         self.hits = OrderedDict()
-        self.unnamed_hit_counter = 0
         for query_ele in iterations.findall('Iteration'):
             self.parse_iteration(query_ele)
     def parse_run_parameters(self):
@@ -135,24 +143,24 @@ class BlastResults(object):
             sub = run_params.find(tag)
             self.run_parameters[key] = sub.text if sub != None else None
     def parse_iteration(self, query_ele):
-        q_id = query_ele.find('Iteration_query-def').text
-        if q_id == self.unnamed_query:
-            q_id += '_{}'.format(query_ele.find('Iteration_iter-num').text)
+        q_id = query_ele.find('Iteration_query-ID').text
         if q_id in self.queries:
             print('Warning: a query sequence has a repeated identifier "{}". It will be ignored.'.format(q_id))
             return
-        q_acc = query_ele.find('Iteration_query-ID').text
+        q_def = query_ele.find('Iteration_query-def').text
+        q_acc = None
         q_len = query_ele.find('Iteration_query-len').text
-        query = BlastSequence(self, q_id, q_acc, q_len)
+        query = BlastSequence(self, q_id, q_def, q_acc, q_len)
         self.queries[q_id] = query
         for hit_ele in query_ele.find('Iteration_hits').findall('Hit'):
             hit_id = hit_ele.find('Hit_id').text
             if hit_id in self.hits:
                 hit = self.hits[hit_id]
             else:
+                hit_def = hit_ele.find('Hit_def').text
                 hit_acc = hit_ele.find('Hit_accession').text
                 hit_len = hit_ele.find('Hit_len').text
-                hit = BlastSequence(self, hit_id, hit_acc, hit_len)
+                hit = BlastSequence(self, hit_id, hit_def, hit_acc, hit_len)
                 self.hits[hit_id] = hit
             for hsp_ele in hit_ele.find('Hit_hsps').findall('Hsp'):
                 h_bitscore = hsp_ele.find('Hsp_bit-score').text
@@ -175,11 +183,15 @@ class BlastResults(object):
 
 class BlastSequence(object):
     """An object representing either a query or hit sequence"""
-    def __init__(self, blast_results, id, accession, length):
+    def __init__(self, blast_results, id, definition, accession, length):
         self.blast_results = blast_results
         self.id = id
+        self.definition = definition
         self.accession = accession
         self.length = int(length)
+        self.description_str = '{} {}'.format(self.id, self.definition)
+        if self.accession != None:
+            self.description_str += ' (Accession: {})'.format(self.accession)
         self.hsps = []
     def filter_hsps(self, max_e_value=None, min_identity=None, min_positive=None, min_query_coverage=None, min_hit_coverage=None, max_gap_coverage=None, min_hsp_length=None, min_bitscore=None, min_score=None):
         filtered = []
@@ -253,6 +265,7 @@ class BlastHsp(object):
         # ensure values are sane. If not, throw error.
         pass
 
+
 # # #  Argument parser and option validation  # # #
 def setup_parser():
     prog_descrip = 'A script to parse a BLAST results file in XML format, and perform some common functions. It works with output from BLASTp, AND OTHERS. Note: the COMMAND argument must appear after all non-command options.'
@@ -267,6 +280,7 @@ def add_arguments(parser):
     command_parser.add_parser("summary", help="Get a summary description (default)")
     command_parser.add_parser("getids", help="Get all specified sequence IDs")
     command_parser.add_parser("getaccs", help="Get all specified sequence accessions")
+    command_parser.add_parser("getdefs", help="Get all specified sequence definitions (note that queries usually have none)")
     command_parser.add_parser("getseqs", help="Get the sequence of all specified HSPs (only the aligned region, not the whole sequence)")
     # #  Sequence type arguments  # #
     seq_type_group = parser.add_argument_group(title="get results from", description="only one option may be specified")
@@ -276,6 +290,7 @@ def add_arguments(parser):
     # #  Optional arguments  # #
     parser.add_argument("--help", action='help', help='show this help message and exit')
     parser.add_argument("-o", "--outfile", help="The name of a file to store the program output. If not given, the output will be printed")
+    parser.add_argument("-r", "--range", action="store_true", help="Include the range of the match (only works with getids, getaccs, and getdefs)")
     parser.add_argument("-n", "--number_matches", type=int, help="Return information from this many sequences")
     parser.add_argument("-s", "--sort", choices=["e_value", "percent_identity", "percent_positive", "query_coverage", "hit_coverage", "gap_coverage", "hsp_length", "bit_score", "score"], nargs=1, metavar="SORT_KEY", help="Sort returned sequences; must be one of: %(choices)s")
     # #  Filtering arguments  # #
@@ -300,6 +315,8 @@ def get_and_validate_arguments(parser):
     if args.hits == args.queries == False:
         args.hits = True
     # #  Optional arguments  # #
+    if args.range == True and args.command not in ("getids", "getaccs", "getdefs"):
+        parser.error('-r/--range can only be used if the command is one of: getids, getaccs, getdefs')
     if args.number_matches != None and args.number_matches <= 0:
         parser.error('-n/--number must be an integer greater than 0')
     if args.sort != None:
@@ -342,31 +359,23 @@ if __name__ == '__main__':
         if args.hits == True:
             seq_info = results.get_hits_per_query(max_e_value=args.e_value, min_identity=args.identity, min_positive=args.positive, min_query_coverage=args.query_coverage, min_hit_coverage=args.hit_coverage, max_gap_coverage=args.gap_coverage, min_hsp_length=args.hsp_length, min_bitscore=args.bit_score, min_score=args.alignment_score, num_matches=args.number_matches, sort=args.sort)
         else:
-            pass
+            seq_info = results.get_queries_per_hit(max_e_value=args.e_value, min_identity=args.identity, min_positive=args.positive, min_query_coverage=args.query_coverage, min_hit_coverage=args.hit_coverage, max_gap_coverage=args.gap_coverage, min_hsp_length=args.hsp_length, min_bitscore=args.bit_score, min_score=args.alignment_score, num_matches=args.number_matches, sort=args.sort)
         for main_seq, matches in seq_info:
-            main_match_str = "{} (Accession: {})".format(main_seq.id, main_seq.accession)
-            buff.append(main_match_str)
-            buff.append("=" * min(len(main_match_str), max_line_width))
+            buff.append(main_seq.description_str)
+            buff.append("=" * min(len(main_seq.description_str), max_line_width))
             for match_seq, hsps in matches.items():
-                minor_match_str = "{} (Accession: {})".format(match_seq.id, match_seq.accession)
-                buff.append(minor_match_str)
-                buff.append("-" * min(len(minor_match_str), max_line_width))
+                buff.append(match_seq.description_str)
+                buff.append("-" * min(len(match_seq.description_str), max_line_width))
                 for hsp in hsps:
                     buff.append("- E-value {0.e_value:.2g}, Bit-score {0.bit_score:.1f} | Query {0.query_range[0]} - {0.query_range[1]} ({0.query_coverage:.1f}%), Hit {0.hit_range[0]} - {0.hit_range[1]} ({0.hit_coverage:.1f}%) | Identities {0.identities} ({0.percent_identity:.1f}%), Positives {0.positives} ({0.percent_positive:.1f}%) | Gaps {0.gaps} ({0.gap_coverage:.2f}%), HSP length {0.hsp_length}".format(hsp))
                 buff[-1] += '\n'
             buff[-1] += '\n'
-    elif args.command in ("getids", "getaccs", "getseqs"):
+    elif args.command in ("getids", "getaccs", "getdefs", "getseqs"):
         if args.hits == True:
             seqs = results.get_all_hits(max_e_value=args.e_value, min_identity=args.identity, min_positive=args.positive, min_query_coverage=args.query_coverage, min_hit_coverage=args.hit_coverage, max_gap_coverage=args.gap_coverage, min_hsp_length=args.hsp_length, min_bitscore=args.bit_score, min_score=args.alignment_score, sort=args.sort)
         else:
             seqs = results.get_all_queries(max_e_value=args.e_value, min_identity=args.identity, min_positive=args.positive, min_query_coverage=args.query_coverage, min_hit_coverage=args.hit_coverage, max_gap_coverage=args.gap_coverage, min_hsp_length=args.hsp_length, min_bitscore=args.bit_score, min_score=args.alignment_score, sort=args.sort)
-        if args.command == "getids":
-            buff.extend([seq.id for seq in seqs])
-            print('Got IDs for {} sequences.'.format(len(seqs)))
-        elif args.command == "getaccs":
-            buff.extend([seq.accession for seq in seqs])
-            print('Got accessions for {} sequences.'.format(len(seqs)))
-        elif args.command == "getseqs":
+        if args.command == "getseqs":
             # for a seq, need to find the best (longest? bitscore?) hsp, and just take the aligned seq from that. getseqs should also have a specific option to remove gaps or not.
             # Note: stopcodons (*) are replaced with an X
             for seq in seqs:
@@ -376,10 +385,31 @@ if __name__ == '__main__':
                         best_len = hsp.hsp_length
                         best_seq = hsp.hit_sequence if args.hits else hsp.query_sequence
                 if best_seq:
-                    buff.append('>{}'.format(seq.id))
+                    buff.append('>{}'.format(seq.description_str))
                     buff.append('{}\n'.format(best_seq.replace('-','').replace('*','X')))
+            print('Got {} sequences.'.format(len(seqs)))
+        else:
+            if args.command == "getids":
+                seq_attr = 'id'
+                command_type = 'IDs'
+            elif args.command == "getaccs":
+                seq_attr = 'accession'
+                command_type = 'accessions'
+            elif args.command == "getdefs":
+                seq_attr = 'definition'
+                command_type = 'definitions'
+            range_attr = 'hit_range' if args.hits == True else 'query_range'
+            for seq in seqs:
+                seq_desc = getattr(seq, seq_attr, None)
+                if seq_desc == None:
+                    continue
+                buff.append(seq_desc)
+                if args.range == True:
+                    ranges = sorted(set(getattr(hsp, range_attr) for hsp in seq.hsps))
+                    buff.append('\n'.join('  {0[0]} - {0[1]}'.format(rng) for rng in ranges))
+            print('Got {} from {} sequences.'.format(command_type, len(seqs)))
 
-    buff_str = '\n'.join(buff)
+    buff_str = '\n'.join(buff) + '\n' # Ends in a newline.
     if args.outfile != None:
         out_path = os.path.realpath(args.outfile)
         with open(out_path, 'w') as f:
@@ -387,7 +417,3 @@ if __name__ == '__main__':
         print('Output saved to {}'.format(out_path))
     else:
         print(buff_str)
-
-    #file_path = 'test-seqs.xml'
-    #file_path = 'Z267716K014-Alignment.xml'
-    #results = results_from_file(file_path)
