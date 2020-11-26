@@ -9,7 +9,6 @@ Note: hits that are common to multiple queries will be merged into a single obje
 """
 
 # TODO:
-# - This works for blastp. Modify so can be used with the other flavours as well.
 # - Create custom errors, replace all exit() calls with them.
 
 import os
@@ -268,7 +267,7 @@ class BlastHsp(object):
 
 # # #  Argument parser and option validation  # # #
 def setup_parser():
-    prog_descrip = 'A script to parse a BLAST results file in XML format, and perform some common functions. It works with output from BLASTp, AND OTHERS. Note: the COMMAND argument must appear after all non-command options.'
+    prog_descrip = 'A script to parse a BLAST results file in XML format, and perform some common functions. Note: the COMMAND argument must appear after all non-command options.'
     prog_epilog = '' # probably a couple example usages
     parser = argparse.ArgumentParser(description=prog_descrip, epilog=prog_epilog, add_help=False)
     add_arguments(parser)
