@@ -13,7 +13,7 @@ an 'alphabet' attribute, listing all letters they contain, as well as the
     matrices -- A list containing the names of the above.
 """
 import os, math
-import matrices
+from . import matrices
 
 
 class Blosum(dict):
@@ -28,7 +28,7 @@ class Blosum(dict):
         self.__initFromNcbiStr(matrixStr)
 
     def __initFromNcbiStr(self, matStr):
-        minVal, maxVal = 100, None
+        minVal, maxVal = float('inf'), float('-inf')
         it = iter(matStr.splitlines())
         for line in it:
             if line.strip().lower().endswith('bit units'):

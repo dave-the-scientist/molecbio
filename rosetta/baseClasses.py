@@ -30,7 +30,7 @@ it is used by BaseClass itself.
 from __future__ import with_statement # Needed for python 2.5
 from . import options, PathError # From __init__ file
 import util, constants, pdbFilter
-import os, subprocess, time, cPickle, datetime
+import os, sys, subprocess, time, cPickle, datetime
 try: import ScoreView
 except ImportError:
     ScoreView = None
@@ -67,9 +67,9 @@ class BaseClass(util.OrderedDict):
         self._runSilent = False
         self._saveState = True
         self._argsInSupplements = []
-        
+
     # # # # #  Common Public Methods  # # # # #
-    
+
     def run(self):
         startTime = time.time()
         try:
@@ -81,8 +81,8 @@ class BaseClass(util.OrderedDict):
             supplements = self._generateSupplements()
             retcode = self._run(args, supplements, silent=self._runSilent)
             self._postRun()
-        except Exception, excep:
-            self._exceptionCallback(excep)
+        except Exception:
+            self._exceptionCallback(sys.exc_info()[1])
         else:
             self._successPostRun()
         finally:
@@ -124,7 +124,7 @@ class BaseClass(util.OrderedDict):
             ppk.outputDir = self.outputDir
             ppk._saveState = False
             ppk.run()
-        
+
     def _preRun(self):
         pass
     def _generateArgs(self):
@@ -157,14 +157,14 @@ class BaseClass(util.OrderedDict):
         sd = util.ScoresDict(self.outputDir)
         if not sd: return False # Error here?
         sd.orderAndTrimDecoys(self.keepTopDecoys, self.outputName)
-        
+
     def _startScoreViewer(self):
         if ScoreView:
             ScoreView.start(self.outputDir)
         elif not options['scoreView_path']:
-            print 'Could not start ScoreView, as the application could not be located. Please update the path in the options.'
+            print('Could not start ScoreView, as the application could not be located. Please update the path in the options.')
         else:
-            print 'Starting ScoreView...'
+            print('Starting ScoreView...')
             util.startWithArgs(options['scoreView_path'], [self.outputDir])
     def _run(self, args, supplements=[], numCPUs=None, silent=False):
         """Run the process described by the args list.
@@ -187,8 +187,7 @@ class BaseClass(util.OrderedDict):
             with open(self.errorLog, 'ab') as errlog:
                 for n, supp in zip(range(numCPUs), supplements):
                     argsList = args + supp
-                    print 'Beginning %s process #%i with arguments:\n%s\n' % (
-                        self.execName, n, ' '.join(argsList))
+                    print('Beginning {} process #{} with arguments:\n{}\n'.format(self.execName, n, ' '.join(argsList)))
                     procs.append(subprocess.Popen(
                         argsList, stdout=outlog.fileno(),
                         stderr=errlog.fileno() ) )
@@ -227,11 +226,11 @@ class BaseClass(util.OrderedDict):
             if fname.startswith(basenames) and fname[:-9] in basenames:
                 count += 1
         return count
-            
+
     def _reportProgress(self, numDone, numTotal):
         now = datetime.datetime.now()
         timestamp = str(datetime.time(now.hour, now.minute, now.second))
-        print '\t%s - %i of %i results completed.' % (timestamp, numDone, numTotal)
+        print('\t{} - {} of {} results completed.'.format(timestamp, numDone, numTotal))
     def _reportCompletion(self, runTime):
         mins, secs = divmod(runTime, 60)
         hours, mins = divmod(mins, 60)
@@ -240,14 +239,14 @@ class BaseClass(util.OrderedDict):
                   ('%.1f seconds' % secs)
         s = '%s run completed in %s.' % (self.execName, timestr)
         dashes = '-'*len(s)
-        print '%s\n%s\n%s\n' % (dashes, s, dashes)
-    
+        print('{}\n{}\n{}\n'.format(dashes, s, dashes))
+
     # # # # #  Under-the-Hood Methods  # # # # #
 
     def _getInputPdb(self): return self['-in:file:s']
     def _setInputPdb(self, path):
         if not os.path.isfile(path):
-            print '%s could not be found to set inputPdb' % path
+            print('{} could not be found to set inputPdb'.format(path))
             return
         self['-in:file:s'] = os.path.realpath(path)
     def _getOutputName(self):
@@ -258,7 +257,7 @@ class BaseClass(util.OrderedDict):
         if name.endswith('.pdb'): name = name[:-4]
         if ' ' in name:
             name = name.replace(' ', '_')
-            print "Due to Rosetta's option handling, there can be no spaces in the file names. Any spaces have been converted to underscores."
+            print("Due to Rosetta's option handling, there can be no spaces in the file names. Any spaces have been converted to underscores.")
         self._outputName = name
     def _getOutputDir(self): return self._outputDir
     def _setOutputDir(self, path):
@@ -369,8 +368,8 @@ class FilterPdbs:
                     numFinished = self._pdbFilter.parseDecoys()
                     if numFinished is False: return 2
             self._postRun()
-        except Exception, excep:
-            self._exceptionCallback(excep)
+        except Exception:
+            self._exceptionCallback(sys.exc_info()[1])
         else:
             self._successPostRun()
         finally:

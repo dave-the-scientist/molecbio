@@ -276,7 +276,7 @@ Available commands:
 if __name__ == '__main__':
     args = sys.argv[1:]
     if not args or '--help' in args:
-        print __help__
+        print(__help__)
         exit()
     command = args[0]
     if command == 'cleanpdb' and 3 <= len(args) <= 4:
@@ -296,5 +296,5 @@ if __name__ == '__main__':
         oldFile, newFile = args[1:3]
         pdbtofasta(oldFile, newFile)
     else:
-        print __help__
+        print(__help__)
         exit()

@@ -15,6 +15,6 @@ __all__ = ['PDB', 'Cluster', 'sequ', 'blosum', 'align', 'rosetta', 'aligners', '
 
 try: import Cluster
 except ImportError:
-    print "Could not import the Cluster module, so its functionality has been disabled. This is usually because the 'numpy' module could not be found."
+    print("Could not import the Cluster module, so its functionality has been disabled. This is usually because the 'numpy' module could not be found.")
     Cluster = None
 import PDB, sequ, blosum, align, aligners

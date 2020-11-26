@@ -9,7 +9,7 @@ except ImportError:
 
 class Needleman_base(object):
     """Performs a Needleman-Wunsch global alignment on 2 sequences.
-    
+
     The align() function ensures the sequences are properly formatted, but this
     can be ~10% slower if they're already formatted, and takes twice as long if
     they're Sequence objects. Faster to format the sequences beforehand, and then
@@ -27,7 +27,7 @@ class Needleman_base(object):
         seq1 = self._filterSeq(seq1)
         seq2 = self._filterSeq(seq2)
         return self._align(seq1, seq2)
-    
+
     def align_raw(self, seq1, seq2):
         return self._align(seq1, seq2)
 
@@ -81,7 +81,7 @@ class CNeedleman(Needleman_base):
     def _align(self, seq1, seq2):
         return nwmodule.align(seq1, seq2, self.matchscore,
                               self.mismatchscore, self.gapscore)
-    
+
 class PyNeedleman(Needleman_base):
     """Implemented in Python."""
     def __init__(self, match=2, mismatch=-1, gap=-1,
@@ -108,7 +108,7 @@ class PyNeedleman(Needleman_base):
         gap = self.gapscore
         prevScores = [gap * i for i in range(1, len(seq1)+1)]
         iter1 = itertools.cycle(seq1)
-        
+
         for j, n in enumerate(seq2):
             diag = gap * j
             left = diag + gap
@@ -154,9 +154,9 @@ class PyNeedleman(Needleman_base):
             align1.append(c1)
             align2.append(c2)
         return ''.join(reversed(align1)), ''.join(reversed(align2))
-        
+
 if nwmodule:
     Needleman = CNeedleman
 else:
-    print "nwmodule.c was not correctly compiled, so the Python implementation will be used instead."
+    print("nwmodule.c was not correctly compiled, so the Python implementation will be used instead.")
     Needleman = PyNeedleman

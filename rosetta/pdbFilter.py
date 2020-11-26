@@ -16,12 +16,12 @@
             or float describing the desired minimum distance (in Angstroms) between
             'residue' and the 'toChain' peptide. Call parseDecoys() when ready to filter.
  Objects: self.proteinAtoms - {'B': {'LYS89': [(x1,y1,z1), (x2,y2,z2)...]...}...}
-            A dict, containing a dict for each chain where the whole protein must be 
+            A dict, containing a dict for each chain where the whole protein must be
             measured. In the sub-dict(s) the keys are the codes for every residue, and
             the value is a list with the xyz coords for each atom.
           self.proteinNs - {'B': {'LYS89': (x,y,z)...}...}
             Similar to above, but instead of a list, there is only one tuple with the
-            coordinates of the backbone nitrogen for that residue (this is the first 
+            coordinates of the backbone nitrogen for that residue (this is the first
             atom listed for each residue).
           self.residueAtoms - {'PHE171B' : [(x1,y1,z1), (x2,y2,z2)...]...}
             A dict with keys as the residue code, number, and chain for each residue
@@ -60,9 +60,9 @@ class PdbFilter:
     def addDistConstraint(self, res, toChain, dist):
         """The residue code should be a string containing the amino acid code, the
         residue number, and the chainID of its protein. For example lysine 212 in chain
-        T would be specified as 'LYS212T'. toChain is the code of the protein this 
+        T would be specified as 'LYS212T'. toChain is the code of the protein this
         residue should be close to, and dist is that distance in angstroms."""
-        if type(toChain) is not str or type(res) is not str: 
+        if type(toChain) is not str or type(res) is not str:
             return False
         dist = float(dist)
         res = res.strip().upper()
@@ -85,8 +85,8 @@ class PdbFilter:
         if not self.scoresDict:
             return False
         for chain in self.distConstraints:
-            print '\nResidues constrained to be near chain %s:\n%s\n' % (chain, '\n'.join('%s, %.1f Angstrom' % (res, dist) for res, dist in self.distConstraints[chain]))
-        print 'Starting to filter pdb files in %s.' % self.workingDir
+            print('\nResidues constrained to be near chain {}:\n{}\n'.format(chain, '\n'.join('{}, {:.1f} Angstrom'.format(res, dist) for res, dist in self.distConstraints[chain])) )
+        print('Starting to filter pdb files in {}.'.format(self.workingDir))
         deleted = 0
         filesToKeep = []
         basenames = tuple(self.basenames)
@@ -100,8 +100,8 @@ class PdbFilter:
                 else:
                     filesToKeep.append(filename)
         self.scoresDict.saveScores()
-        print 'Filtering completed and score file updated.'
-        print '%i files deleted, %i kept, out of %i total pdbs.\n' % (deleted, len(filesToKeep), deleted+len(filesToKeep))
+        print('Filtering completed and score file updated.')
+        print('{} files deleted, {} kept, out of {} total pdbs.\n'.format(deleted, len(filesToKeep), deleted+len(filesToKeep)))
         return len(filesToKeep)
 
     def orderDecoys(self):
@@ -131,7 +131,7 @@ class PdbFilter:
         self.__orderDecoys(fileList)
         return True
 
-    # # # # # # # # # # # # # # # #  Private Functions  # # # # # # # # # # # # # # # # 
+    # # # # # # # # # # # # # # # #  Private Functions  # # # # # # # # # # # # # # # #
     def __checkPdbConstraints(self, filepath):
         self.proteinAtoms, self.proteinNs = {}, {}
         self.residueAtoms, self.residueNs = {}, {}
@@ -188,7 +188,7 @@ class PdbFilter:
         constraint. If the backbone atoms are close, each atom in both residues is
         compared. If one pair of atoms is found within the specified distance, the
         algorithm moves on. Comparisons are done by comparing X values, then Y, then
-        Z; only if these are all close will the full distance calculation be done. 
+        Z; only if these are all close will the full distance calculation be done.
         Returns True if all constraints satisfied, else False"""
         for chainID, l in self.distConstraints.items():
             for res, dist in l:

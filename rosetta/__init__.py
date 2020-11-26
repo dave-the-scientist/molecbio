@@ -40,6 +40,5 @@ options.save()
 import pdbFilter
 try: from molecbio.rosettaApps import ScoreView
 except ImportError:
-    print "Could not import the ScoreView module. This is most likely becuse the 'ttk' dependency could not be found."
+    print("Could not import the ScoreView module. This is most likely becuse the 'ttk' dependency could not be found.")
 from classes import *
-

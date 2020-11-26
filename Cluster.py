@@ -109,12 +109,12 @@ class Clusterer:
             if not os.path.isfile(path) or not path.endswith('.pdb'):
                 return False
         if not newFilepath.endswith('.pdb'): newFilepath += '.pdb'
-        
+
         tarCoords, tarCent = self.__parseCoordsCentroid(alignThis, False)
         coordsB, centB = self.__parseCoordsCentroid(toThis, False)
         tarCoords -= tarCent; coordsB -= centB
         alignedCoords = self.__align(tarCoords, coordsB) + centB
-        
+
         buff = []
         old = open(alignThis, 'rb')
         coordsIter = ((x,y,z) for x,y,z in alignedCoords)
@@ -176,12 +176,12 @@ class Clusterer:
             coords = numpy.array( [(float(line[30:38]),float(line[38:46]),float(line[46:55]))
                                    for line in open(filepath, 'rb') if line.startswith('ATOM')
                                    and line[13:15] == 'CA'] )
-            
+
         else:
             coords = numpy.array( [[float(line[30:38]),float(line[38:46]),float(line[46:55])]
                                    for line in open(filepath, 'rb') if line.startswith('ATOM')
                                    or line.startswith('HETATM')] )
-       
+
         #    coords = numpy.array( [[float(n) for n in line[31:55].split()] for line in f
         #                           if line.startswith('ATOM') and line[13:15] == 'CA'] )
         #else:
@@ -216,21 +216,21 @@ class Clusterer:
             total, done = len(targets), 0
             while True:
                 done += self._readProgressStep
-                print '%i of %i files loaded.' % (done, total)
+                print('{} of {} files loaded.'.format(done, total))
                 yield done
         def defaultCmpFxn():
             total, done = len(targets) * (len(targets)-1) / 2, 0
             while True:
                 done += self._cmpProgressStep
-                print '%i of %i compares done.' % (done, total)
-                yield done            
+                print('{} of {} compares done.'.format(done, total))
+                yield done
         gc.disable()
         rmsds = self.rmsds
         rdFxn = self._readProgressFxn
         cmpFxn = self._cmpProgressFxn
         if not callable(rdFxn): rdFxn = defaultReadFxn().next
         if not callable(cmpFxn): cmpFxn = defaultCmpFxn().next
-        
+
         fileA = targets[0]
         pathA = os.path.join(dirPath, fileA)
         if not rmsds:
@@ -238,7 +238,7 @@ class Clusterer:
 
         # Below is the slow part about reading in the files. It appears 0.5 sec per file
         # on a remote machine is about normal, but sometimes that machine will cache them
-        # so they are opened in 0.05 sec instead. 
+        # so they are opened in 0.05 sec instead.
         for i, name in enumerate(targets):
             if name not in self.__centeredCoords:
                 self.__readInPdb(os.path.join(dirPath,name))
@@ -283,7 +283,7 @@ class Clusterer:
                 i = 0
                 if progFxn: progFxn()
         return decoys
-    
+
     def __findClusters(self, clusterThreshold):
         # This optimized? Am i traversing the list n^2 times?
         self.__updateDecoyNeighbors(clusterThreshold)
@@ -305,4 +305,3 @@ class Clusterer:
             if dist != None and dist < threshold:
                 self.decoys[fileA].append(fileB)
                 self.decoys[fileB].append(fileA)
-

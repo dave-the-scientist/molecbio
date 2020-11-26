@@ -139,7 +139,7 @@ class OrderedDict(dict):
         v = self[key]
         self.__delitem__(key)
         return v
-    
+
 class ScoresDict(dict):
     """ The scoreType() method indicates what type of score file has been opened, if
     known. Returns a string, one of 'docking', 'abinitio', 'homology', or
@@ -168,7 +168,7 @@ class ScoresDict(dict):
             buff.append(self.lines[name])
         buff.append('') # So the file can be appended to.
         f = open(filepath, 'wb')
-        f.write('\n'.join(buff)); f.close()    
+        f.write('\n'.join(buff)); f.close()
 
     def sort(self, metric=None):
         if metric not in self.__metrics:
@@ -241,7 +241,7 @@ class ScoresDict(dict):
             else:
                 self.renameFiles(oldFilename, filename)
         self.saveScores()
-    
+
     def __isScoreFile(self, filename):
         suffixes = ('fasc', 'fsc', 'sc')
         if filename.lower().split('.')[-1] in suffixes:
@@ -265,14 +265,14 @@ class ScoresDict(dict):
             temp = f.readline()
             if temp.startswith('SEQUENCE:'): header = f.readline().strip()
             else: header, temp = temp.strip(), ''
-            scoresHeader = [score.strip() for score in header.split()[1:] 
+            scoresHeader = [score.strip() for score in header.split()[1:]
                             if not score.isspace() and 'description' not in score]
             self.__metrics = scoresHeader
             self.__header = temp+header
             self.__rankingMetric = scoresHeader
             for line in f:
                 resultDict = {}
-                segs = [seg.strip() for seg in line.split()[1:] 
+                segs = [seg.strip() for seg in line.split()[1:]
                         if not seg.isspace()]
                 name = os.path.basename(segs.pop().strip())
                 if not name.endswith('.pdb'): name += '.pdb' # Results must be pdbs.
@@ -282,7 +282,7 @@ class ScoresDict(dict):
                 self.lines[name] = line.strip()
             return True
         except:
-            print '\nError occured attempting to parse %s.\n'%self.filepath
+            print('\nError occured attempting to parse {}.\n'.format(self.filepath))
             self.__header = ''
             self.lines = {}
             self.clear()
