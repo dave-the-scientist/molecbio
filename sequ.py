@@ -2,6 +2,11 @@
 # Author: Dave Curran
 # Date:   April 2012
 # # # # # # # # # # #
+
+# TODO:
+# When rewritten, would be great to also have a command line tool to do many common tasks.
+# - Like to remove empty sequence. Or remove non-unique sequences. Extract a portion of an alignment, etc.
+
 """
 Various functions and variables to deal with DNA or protein sequences.
 
@@ -139,20 +144,21 @@ def parsefasta(textobj, onlyThese=None):
     return seqs
 def loadfasta(filepath, onlyThese=[]):
     """Returns a list of Sequence objects from the filepath."""
-    with open(filepath, 'rb') as f:
+    with open(filepath, 'r') as f:
         seqs = parsefasta(f, onlyThese)
     return seqs
 def savefasta(seqList, filepath, line=60, spaces=False, numbers=False):
     """Saves the given list of Sequences to filepath in fasta format."""
     seqStr = '\n'.join(seq.fasta(line, spaces, numbers) for seq in seqList)
-    with open(filepath, 'wb') as f:
+    with open(filepath, 'w') as f:
         f.write(seqStr)
 def cleanfasta(filepath):
     seqs = loadfasta(filepath)
     buff = [seq.__str__() for seq in seqs]
     #buff = map(str, seqs)
-    f = open(filepath, 'wb')
-    f.write('\n'.join(buff)); f.close()
+    with open(filepath, 'w') as f:
+        f.write('\n'.join(buff))
+        f.close()
 
 # # # # # # # # # #  Basic Functions  # # # # # # # # # #
 def invcomplement(sequence):
@@ -218,7 +224,7 @@ def calcIdentity(sequence1, sequence2):
 def __chunksequence(sequence, chunksize, only_complete=False):
     if only_complete: length = len(sequence)-(chunksize-1)
     else: length = len(sequence)
-    for i in xrange(0, length, chunksize):
+    for i in range(0, length, chunksize):
         yield sequence[i:i+chunksize]
 
 def parsefasta_OLD(textobj):
@@ -317,7 +323,7 @@ class Sequence(object):
     def __getSequence(self): return self.__sequence
     def __setSequence(self, sequence):
         if not sequence: sequence = ''
-        sequence = filter(lambda c: c in self.allowedChars or c.isalpha(), sequence)
+        sequence = ''.join(filter(lambda c: c in self.allowedChars or c.isalpha(), sequence))
         if self.onlyUpper: sequence = sequence.upper()
         self.__sequence = ''.join(sequence)
     def __getFastseq(self): return self.__sequence

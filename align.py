@@ -2,6 +2,11 @@
 # Author: Dave Curran
 # Date:   April 2012
 # # # # # # # # # # #
+
+# TODO:
+# Add methods to remove blocks of each sequence. Used to remove signal peptide, extract N-lobe only, etc.
+# Add method to view (phylilp-like format) alignment. (should be easy to only view a subset, like the signal peptide).
+
 """
 A module made to manipulate and perform several functions on sequence alignments.
 
@@ -42,7 +47,7 @@ Defines the following:
 """
 from __future__ import with_statement # Needed for python 2.5
 import itertools, math, operator
-import sequ, blosum
+from molecbio import sequ, blosum
 
 # # # # #  I/O Functions  # # # # #
 def open_clustal(filepath):
@@ -95,7 +100,7 @@ def saveas_phylip(seqList, filepath):
     buff.extend(sequences)
     with open(filepath, 'wb') as f:
         f.write('\n'.join(buff))
-    
+
 def saveas_binned(filepath, scores, thresholds=(3.33333, 6.66666)):
     """Saves list of scores as spreadsheet-readable bins.
 
@@ -118,7 +123,7 @@ def sliding_average(values, size=3):
         """Posted by Daniel DiPaolo on StackOverflow.com"""
         it = iter(seq)
         result = tuple(itertools.islice(it, size))
-        if len(result) == size: yield result    
+        if len(result) == size: yield result
         for elem in it:
             result = result[1:] + (elem,)
             yield result
@@ -129,7 +134,7 @@ def sliding_average(values, size=3):
 
 def bin_values(values, thresholds=(3.33333, 6.66666)):
     """Divides the list of values into the bins specified by thresholds.
-    
+
     Each bin will be zero-padded to the same length as the original, and
     excludes the upper boundary value. So the default bins are [-inf, 3.333),
     [3.333, 6.666), [6.666, +inf]."""

@@ -57,17 +57,17 @@ class Needleman_base(object):
     def _filterSeq(self, seq):
         if type(seq) == sequ.Sequence: seq = seq.seq
         else: seq = str(seq)
-        return filter(str.isalpha, seq).upper()
+        return ''.join(filter(str.isalpha, seq)).upper()
     def _filterSeqList(self, seqList):
-        try: seqList = [filter(str.isalpha, s.seq).upper() for s in seqList]
-        except: seqList = [filter(str.isalpha, s).upper() for s in seqList]
+        try: seqList = [''.join(filter(str.isalpha, s.seq)).upper() for s in seqList]
+        except: seqList = [''.join(filter(str.isalpha, s)).upper() for s in seqList]
         return seqList
     def _pairwiseAlignGen(self, seqList):
         seqList = self._filterSeqList(seqList)
         for seq1, seq2 in itertools.combinations(seqList, 2):
             yield self._align(seq1, seq2)
     def _percentIdentity(self, align1, align2):
-        matches = map(operator.eq, align1, align2)
+        matches = list(map(operator.eq, align1, align2))
         return sum(matches) * 100.0 / len(matches)
 
 
@@ -114,7 +114,7 @@ class PyNeedleman(Needleman_base):
             left = diag + gap
             scores = []
             paths = []
-            for up, m in itertools.izip(prevScores, iter1):
+            for up, m in zip(prevScores, iter1):
                 if m == n: score = match
                 else: score = mismatch
                 diagscore = diag + score
@@ -139,18 +139,18 @@ class PyNeedleman(Needleman_base):
         while i != -1 and j != -1:
             path = paths[j][i]
             if path == 1:
-                align1.append(iter1.next())
-                align2.append(iter2.next())
+                align1.append(next(iter1))
+                align2.append(next(iter2))
                 i -= 1; j -= 1
             elif path == 2:
-                align1.append(iter1.next())
+                align1.append(next(iter1))
                 align2.append('-')
                 i -= 1
             else:
                 align1.append('-')
-                align2.append(iter2.next())
+                align2.append(next(iter2))
                 j -= 1
-        for c1, c2 in itertools.izip_longest(iter1, iter2, fillvalue='-'):
+        for c1, c2 in itertools.zip_longest(iter1, iter2, fillvalue='-'):
             align1.append(c1)
             align2.append(c2)
         return ''.join(reversed(align1)), ''.join(reversed(align2))
