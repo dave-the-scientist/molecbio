@@ -1,3 +1,8 @@
+# TODO
+#- Reformat the below description, so that new methods start with '-', and the extra text starts with an indent.
+#- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
+#- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
+#- Some method or property to see if the tree is fully binary or not, and make it easy to find where in the tree that is (getting leaves under the non-binary node or something).
 """A module containing the Tree and TreeNode class definitions, and functionality to parse, manipulate, and save phylogenetic trees in Newick, NEXUS, PhyloXML, or NeXML formats.
 
 Input/Output
