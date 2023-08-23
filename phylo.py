@@ -3,6 +3,7 @@
 #- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
 #- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
 #- Some method or property to see if the tree is fully binary or not, and make it easy to find where in the tree that is (getting leaves under the non-binary node or something).
+# - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking if a node is in tree.leaves. resetting and copying and processing functions for nodes may have to account for it
 """A module containing the Tree and TreeNode class definitions, and functionality to parse, manipulate, and save phylogenetic trees in Newick, NEXUS, PhyloXML, or NeXML formats.
 
 Input/Output
@@ -79,6 +80,10 @@ Tree.root_nodes(node1, node2, distance)
 
 Tree modification methods
 -------------------------
+Tree.rotate_node(node, propagate_rotation=True)
+  - Swaps the children of the given node, as well as all descendants to give a proper rotation. If 'propagate_rotation' is False only the given node's children will be swapped, resulting in the subtrees remaining untouched.
+Tree.rotate_subtree(names, propagate_rotation=True)
+  - Rotates the subtree rooted at the most recent common ancestor of the nodes identified in 'names'.
 Tree.reorder_children(increasing=True)
   - This method reorders each node's children for asthetic purposes and ease of viewing. If increasing=True, children are ordered so that short leaves come before leaves with long branches, which come before children that are internal nodes. Setting increasing=False reverses this. Note that most phylogenetic tree viewing software respects the given order of children, but not all.
 Tree.prune_to(names, merge_monotomies=True)
@@ -151,14 +156,18 @@ Some functions will print warnings or other information during execution that ar
 
 
 import re, operator, itertools
+import os.path
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 import numpy as np
 
 verbose = True
 
+def process_path(file_path):
+    return os.path.abspath(os.path.expanduser(os.path.normpath(file_path)))
+
 def load_tree(tree_filename, internal_as_names=False, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_tree_string(tree_string, internal_as_names, **kwargs)
 def load_tree_string(tree_string, internal_as_names=False, **kwargs):
@@ -176,7 +185,7 @@ def load_tree_string(tree_string, internal_as_names=False, **kwargs):
         return None
 
 def load_newick(tree_filename, internal_as_names=False, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_newick_string(tree_string, internal_as_names, **kwargs)
 def load_newick_string(tree_string, internal_as_names=False, **kwargs):
@@ -185,7 +194,7 @@ def load_newick_string(tree_string, internal_as_names=False, **kwargs):
     return tree
 
 def load_nexus(tree_filename, internal_as_names=False, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_nexus_string(tree_string, internal_as_names, **kwargs)
 def load_nexus_string(tree_string, internal_as_names=False, **kwargs):
@@ -193,7 +202,7 @@ def load_nexus_string(tree_string, internal_as_names=False, **kwargs):
     tree.parse_nexus(tree_string, internal_as_names)
     return tree
 def load_multiple_nexus(tree_filename, internal_as_names=False, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_multiple_nexus_string(tree_string, internal_as_names, **kwargs)
 def load_multiple_nexus_string(tree_string, internal_as_names=False, **kwargs):
@@ -201,7 +210,7 @@ def load_multiple_nexus_string(tree_string, internal_as_names=False, **kwargs):
     return tree.parse_multiple_nexus(tree_string, internal_as_names)
 def save_multiple_nexus(trees, tree_filename, translate_command=False, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
     tree_string = multiple_nexus_string(trees, translate_command, support_as_comment, support_values, comments, internal_names, max_name_length)
-    with open(tree_filename, 'w') as f:
+    with open(process_path(tree_filename), 'w') as f:
         f.write(tree_string)
 def multiple_nexus_string(trees, translate_command=False, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
     indent = '    '
@@ -249,7 +258,7 @@ def multiple_nexus_string(trees, translate_command=False, support_as_comment=Fal
     return '\n'.join(nexus_buff)
 
 def load_phyloxml(tree_filename, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_phyloxml_string(tree_string, **kwargs)
 def load_phyloxml_string(tree_string, **kwargs):
@@ -257,7 +266,7 @@ def load_phyloxml_string(tree_string, **kwargs):
     tree.parse_phyloxml(tree_string)
     return tree
 def load_multiple_phyloxml(tree_filename, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_multiple_phyloxml_string(tree_string, **kwargs)
 def load_multiple_phyloxml_string(tree_string, **kwargs):
@@ -265,7 +274,7 @@ def load_multiple_phyloxml_string(tree_string, **kwargs):
     return tree.parse_multiple_phyloxml(tree_string)
 def save_multiple_phyloxml(trees, tree_filename, support_values=True, comments=True, internal_names=True, max_name_length=None):
     tree_string = multiple_phyloxml_string(trees, support_values, comments, internal_names, max_name_length)
-    with open(tree_filename, 'w') as f:
+    with open(process_path(tree_filename), 'w') as f:
         f.write(tree_string)
 def multiple_phyloxml_string(trees, support_values=True, comments=True, internal_names=True, max_name_length=None):
     e_tree = ET.Element('phyloxml')
@@ -287,7 +296,7 @@ def multiple_phyloxml_string(trees, support_values=True, comments=True, internal
     return ET.tostring(e_tree, encoding='UTF-8', method='xml').decode()
 
 def load_nexml(tree_filename, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_nexml_string(tree_string, **kwargs)
 def load_nexml_string(tree_string, **kwargs):
@@ -295,7 +304,7 @@ def load_nexml_string(tree_string, **kwargs):
     tree.parse_nexml(tree_string)
     return tree
 def load_multiple_nexml(tree_filename, **kwargs):
-    with open(tree_filename) as f:
+    with open(process_path(tree_filename)) as f:
         tree_string = f.read()
     return load_multiple_nexml_string(tree_string, **kwargs)
 def load_multiple_nexml_string(tree_string, **kwargs):
@@ -303,7 +312,7 @@ def load_multiple_nexml_string(tree_string, **kwargs):
     return tree.parse_multiple_nexml(tree_string)
 def save_multiple_nexml(trees, tree_filename, support_values=True, comments=True, internal_names=True, max_name_length=None):
     tree_string = multiple_nexml_string(trees, support_values, comments, internal_names, max_name_length)
-    with open(tree_filename, 'w') as f:
+    with open(process_path(tree_filename), 'w') as f:
         f.write(tree_string)
 def multiple_nexml_string(trees, support_values=True, comments=True, internal_names=True, max_name_length=None):
     e_tree = ET.Element('nexml')
@@ -460,6 +469,18 @@ class Tree(object):
         self.process_tree_nodes()
 
     # # #  Public functions
+    def rotate_node(self, node, propagate_rotation=True):
+        """Swaps the children of the given node, as well as all descendants to give a proper rotation. If 'propagate_rotation' is False only the given node's children will be swapped, resulting in the subtrees remaining untouched."""
+        node.children.reverse()
+        if propagate_rotation == True:
+            self.traverse_rotate_children(node)
+    def rotate_subtree(self, names, propagate_rotation=True):
+        """Rotates the subtree rooted at the most recent common ancestor of the nodes identified in 'names'."""
+        nodes = self.get_nodes(names)
+        if not nodes:
+            raise PhyloValueError('Error: could not identify a subtree, as the given names were not found in the tree.')
+        rca = self.get_recent_common_ancestor(nodes)
+        self.rotate_node(rca, propagate_rotation)
     def reorder_children(self, increasing=True):
         """Reorders each node's children for asthetic purposes.
         If increasing=True, children are ordered so that short leaves come before leaves with long branches, which come before children that are internal nodes. Setting increasing=False reverses this."""
@@ -570,7 +591,7 @@ class Tree(object):
             name = name[1:-1]
         node = self.node_names.get(name, None)
         if node is None and not prevent_error:
-            raise PhyloValueError("Error: could not find a TreeNode object named {}".format(name))
+            raise PhyloValueError("Error: could not find a TreeNode object named '{}'.".format(name))
         return node
     def get_nodes(self, names):
         """Given a list of strings, returns a list of TreeNode objects with those names."""
@@ -754,7 +775,7 @@ class Tree(object):
         self.process_tree_nodes()
     def save_newick(self, tree_filename, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
         tree_string = self.newick_string(support_as_comment, support_values, comments, internal_names, max_name_length)
-        with open(tree_filename, 'w') as f:
+        with open(process_path(tree_filename), 'w') as f:
             f.write(tree_string)
     def newick_string(self, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
         if internal_names: # Otherwise support_as_comment defaults to True
@@ -805,7 +826,7 @@ class Tree(object):
         return trees
     def save_nexus(self, tree_filename, translate_command=False, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
         tree_string = self.nexus_string(translate_command, support_as_comment, support_values, comments, internal_names, max_name_length)
-        with open(tree_filename, 'w') as f:
+        with open(process_path(tree_filename), 'w') as f:
             f.write(tree_string)
     def nexus_string(self, translate_command=False, support_as_comment=False, support_values=True, comments=True, internal_names=True, max_name_length=None):
         indent = '    '
@@ -854,7 +875,7 @@ class Tree(object):
         return trees
     def save_phyloxml(self, tree_filename, support_values=True, comments=True, internal_names=True, max_name_length=None):
         tree_string = self.phyloxml_string(support_values, comments, internal_names, max_name_length)
-        with open(tree_filename, 'w') as f:
+        with open(process_path(tree_filename), 'w') as f:
             f.write(tree_string)
     def phyloxml_string(self, support_values=True, comments=True, internal_names=True, max_name_length=None):
         e_tree = ET.Element('phyloxml')
@@ -892,7 +913,7 @@ class Tree(object):
         return trees
     def save_nexml(self, tree_filename, support_values=True, comments=True, internal_names=True, max_name_length=None):
         tree_string = self.nexml_string(support_values, comments, internal_names, max_name_length)
-        with open(tree_filename, 'w') as f:
+        with open(process_path(tree_filename), 'w') as f:
             f.write(tree_string)
     def nexml_string(self, support_values=True, comments=True, internal_names=True, max_name_length=None):
         e_tree = ET.Element('nexml')
@@ -1308,7 +1329,7 @@ class Tree(object):
                 if node.name != node.id:
                     node_e.set('label', clean_name)
                     if clean_name in uniq_names:
-                        raise PhyloValueError("Error: cannot save tree in NeXML format. After removing restricted characters, two nodes ended up with the name '{}'".format(clean_name))
+                        raise PhyloValueError("Error: cannot save tree in NeXML format. After removing restricted characters, two nodes ended up with the name '{}'.".format(clean_name))
                     uniq_names.add(clean_name)
             if support_values and node.support != None:
                 meta_id = node_id+'_s0'
@@ -1482,6 +1503,11 @@ class Tree(object):
             new_tree.nodes.add(new_child)
             self.copy_nodes(old_child, new_child, new_tree)
         new_parent.children = new_children
+    def traverse_rotate_children(self, node):
+        for child in node.children:
+            if child not in self.leaves:
+                self.rotate_node(child, propagate_rotation=False)
+                self.traverse_rotate_children(child)
     def traverse_order_children(self, node, increasing):
         order, total_children = {}, 0
         for child in node.children:
