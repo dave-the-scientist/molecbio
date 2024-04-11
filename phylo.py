@@ -4,6 +4,7 @@
 #- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
 #- Some method or property to see if the tree is fully binary or not, and make it easy to find where in the tree that is (getting leaves under the non-binary node or something).
 # - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking if a node is in tree.leaves. resetting and copying and processing functions for nodes may have to account for it
+# - Certain attributes, like node.name, need to be modified by calling a function, not by directly setting the attribute. Identify others, and protect them with setter/getter decorators
 """A module containing the Tree and TreeNode class definitions, and functionality to parse, manipulate, and save phylogenetic trees in Newick, NEXUS, PhyloXML, or NeXML formats.
 
 Input/Output
