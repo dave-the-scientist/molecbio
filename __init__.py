@@ -10,7 +10,7 @@ Several modules written to handle molecular biology tasks.
      Note that this package is not implicitly loaded with molecbio.
 """
 __version__ = '0.5'
-__author__ = 'Dave Curran (curran.dave.m@gmail.com)'
+__author__ = 'Dave Curran (daves.binf.tools@gmail.com)'
 __all__ = ['PDB', 'Cluster', 'sequ', 'blosum', 'align', 'rosetta', 'aligners', 'phylo']
 
 # when I rewrite this, include the alignment functionality from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/calculate_alignment_identity.py and the visualization functionality from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/analyze_hits.py and the blast sequence extraction from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/extract_sequences.py
