@@ -1,5 +1,4 @@
 # TODO
-#- To open a tree in Figtree that has support values, the tree must be saved with internal_names and support_as_comment set to False. Make this parameter set the default? Could be enough to have internal_names set to False by default, and only switch default to true if a tree is read that contains internal names.
 #- Reformat the below description, so that new methods start with '-', and the extra text starts with an indent.
 #- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
 #- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
