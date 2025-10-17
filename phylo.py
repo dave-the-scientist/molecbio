@@ -365,8 +365,13 @@ class Tree(object):
         self.nodes = set()
         self.paths = {}
         self.path_dists = {}
+        # # #  Public descriptive attributes
+        self.is_cladogram = None # None means it hasn't been set; will be True or False.
+
+        self.is_binary = None
+        self.is_rooted = None
+
         # # #  Private attributes
-        self._is_cladogram = None # None means it hasn't been set; will be True or False.
         self._cladogram_branch = 1.0 # length of each branch in a cladogram
         self._remove_name_quotes = remove_name_quotes
         self._support_label = support_label
@@ -571,7 +576,7 @@ class Tree(object):
     def set_cladogram(self, cladogram_branch=1.0):
         """Sets the tree to be a cladogram, so no branch lengths will be saved.
         The argument 'cladogram_branch' can be used to set the default length, used for some internal calculations; the value should not have any effect for the user."""
-        self._is_cladogram = True
+        self.is_cladogram = True
         self._cladogram_branch = cladogram_branch
         for node in self.nodes:
             if node != self.root:
@@ -651,7 +656,7 @@ class Tree(object):
     def get_node_subtree(self, node, keep_root_branch=False):
         """Returns a new Tree object of the subtree rooted at node."""
         subtree = Tree(support_label=self._support_label, remove_name_quotes=self._remove_name_quotes)
-        subtree._is_cladogram = self._is_cladogram
+        subtree.is_cladogram = self.is_cladogram
         subtree._cladogram_branch = self._cladogram_branch
         subtree._node_id_template = self._node_id_template
         subtree.root = node.copy(subtree)
@@ -664,7 +669,7 @@ class Tree(object):
         """Returns a deep copy of the current Tree object."""
         new_tree = Tree(support_label=self._support_label, remove_name_quotes=self._remove_name_quotes)
         new_tree.name = self.name
-        new_tree._is_cladogram = self._is_cladogram
+        new_tree.is_cladogram = self.is_cladogram
         new_tree._cladogram_branch = self._cladogram_branch
         new_tree._node_id_template = self._node_id_template
         new_tree._node_ids = self._node_ids.copy()
@@ -708,7 +713,7 @@ class Tree(object):
             dist_mat[i,j] = dist
             dist_mat[j,i] = dist
         return names, dist_mat
-    def get_leaf_coordinate_points(self, max_dimensions=None):
+    def get_leaf_coordinate_points(self, max_dimensions=None, min_epsilon=1e-5):
         """Returns a sorted list of strings, and a 2D Numpy array. The coordinates for tree leaf i are found by 'coords[i]'.
         If 'max_dimensions' is specified, the least significant dimensions will be discarded.
         The algorithm was found at http://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix/423898#423898"""
@@ -728,7 +733,7 @@ class Tree(object):
         values, vectors = np.linalg.eigh(m_mat)
         tokeep = max(len(values) - max_dimensions, 0) if max_dimensions else 0
         values, vectors = values[tokeep:], vectors[:,range(tokeep, len(values))]
-        coords = np.column_stack(vectors[:,i]*np.sqrt(val) for i, val in enumerate(values) if val > 1e-5)
+        coords = np.column_stack([vectors[:,i]*np.sqrt(val) for i, val in enumerate(values) if val >= min_epsilon])
         return names, coords
 
     # # #  Newick parsing and saving functions
@@ -1051,7 +1056,7 @@ class Tree(object):
         if node in self.leaves:
             if comments:
                 name += comment
-            if self._is_cladogram:
+            if self.is_cladogram:
                 return name
             else:
                 return '{}:{}'.format(name, self.format_branch(node.branch))
@@ -1062,7 +1067,7 @@ class Tree(object):
                     children_buff.append(name)
                 if comments:
                     children_buff.append(comment)
-                if not self._is_cladogram and (node!=self.root or node.branch!=0):
+                if not self.is_cladogram and (node!=self.root or node.branch!=0):
                     children_buff.append(':' + self.format_branch(node.branch))
                 if node.support != None:
                     children_buff.append('[{}]'.format(node.support))
@@ -1073,7 +1078,7 @@ class Tree(object):
                     children_buff.append(name)
                 if comments:
                     children_buff.append(comment)
-                if not self._is_cladogram and (node!=self.root or node.branch!=0):
+                if not self.is_cladogram and (node!=self.root or node.branch!=0):
                     children_buff.append(':' + self.format_branch(node.branch))
             return ''.join(children_buff)
 
@@ -1212,7 +1217,7 @@ class Tree(object):
             name_e = ET.Element('name')
             name_e.text = name
             element.append(name_e)
-        if not self._is_cladogram:
+        if not self.is_cladogram:
             branch_e = ET.Element('branch_length')
             branch_e.text = self.format_branch(node.branch)
             element.append(branch_e)
@@ -1344,7 +1349,7 @@ class Tree(object):
                 self.add_nexml_meta_element(node_e, meta_id, 'nex:comment', replacer_fxn(node.comment))
             node_ids.setdefault(clean_name, {})['node'] = node_id
             clean_names[node] = clean_name
-        if not self._is_cladogram and self.root.branch:
+        if not self.is_cladogram and self.root.branch:
             node_id = node_ids[clean_names[self.root]]['node']
             rootedge_e = ET.SubElement(tree_e, 'rootedge')
             rootedge_e.set('id', 're0')
@@ -1360,7 +1365,7 @@ class Tree(object):
             edge_e.set('id', edge_id)
             edge_e.set('target', trg_id)
             edge_e.set('source', src_id)
-            if not self._is_cladogram:
+            if not self.is_cladogram:
                 edge_e.set('length', str(node.branch))
     def add_nexml_meta_element(self, node_e, meta_id, _property, content):
         meta_e = ET.SubElement(node_e, 'meta')
@@ -1394,9 +1399,10 @@ class Tree(object):
         self._node_ids.remove(node.id)
         self.nodes.remove(node)
     def process_tree_nodes(self):
-        """Cleans up the node names, differentiating between internal names and support values. Ensures all nodes have a numerical node.branch value. Sets self._is_cladogram. Fills out the self.leaves and self.internal sets and the self.node_names dict."""
+        """Cleans up the node names, differentiating between internal names and support values. Ensures all nodes have a numerical node.branch value. Sets self.is_binary, self.is_rooted, and self.is_cladogram. Fills out the self.leaves and self.internal sets and the self.node_names dict."""
         self.leaves, self.internal = set(), set()
-        _is_cladogram = True
+        num_children = {}
+        is_cladogram = True
         for node in self.nodes:
             if not node._been_processed:
                 if not node.name:
@@ -1405,9 +1411,11 @@ class Tree(object):
                     node.name = node.name[1:-1].strip()
                 if node.branch != '' and node.branch != None:
                     node.branch = float(node.branch)
-                    _is_cladogram = False
+                    is_cladogram = False
                 else:
                     node.branch = 0.0
+            num_chld = len(node.children)
+            num_children.setdefault(num_chld, []).append(node)
             if not node.children:
                 self.leaves.add(node)
             else:
@@ -1421,12 +1429,21 @@ class Tree(object):
                         if not node.comment:
                             node.comment = node.support
                         node.support = None
-        if self._is_cladogram == None:
-            self._is_cladogram = _is_cladogram
+        if set(num_children) == {0, 2}:
+            self.is_binary = True
+            self.is_rooted = True
+        elif set(num_children) == {0, 2, 3} and len(num_children[3]) == 1 and num_children[3][0] == self.root:
+            self.is_binary = True
+            self.is_rooted = False
+        else:
+            self.is_binary = False
+            self.is_rooted = None
+        if self.is_cladogram == None:
+            self.is_cladogram = is_cladogram
         self.node_names = {}
         for node in self.nodes:
             if node != self.root:
-                if self._is_cladogram:
+                if self.is_cladogram:
                     node.branch = self._cladogram_branch
             if node.name in self.node_names:
                 i = 2
