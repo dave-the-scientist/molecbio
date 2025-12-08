@@ -1,10 +1,11 @@
 # TODO
+#- CANNOT save some large trees; hitting recursion limit in format_newick_string(). Need to reformat this function, likely using the order from get_ordered_nodes(). 
 #- To open a tree in Figtree that has support values, the tree must be saved with internal_names and support_as_comment set to False. Make this parameter set the default? Could be enough to have internal_names set to False by default, and only switch default to true if a tree is read that contains internal names.
 #- Reformat the below description, so that new methods start with '-', and the extra text starts with an indent.
 #- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
 #- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
-#- Some method or property to see if the tree is fully binary or not, and make it easy to find where in the tree that is (getting leaves under the non-binary node or something).
-# - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking if a node is in tree.leaves. resetting and copying and processing functions for nodes may have to account for it
+# - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking "node in self.leaves". resetting and copying and processing functions for nodes may have to account for it
+#   - I've implemented node.is_leaf to do this, set in process_tree_nodes(); need to test it after loading different tree formats, copying, rooting, re-ordering, etc. make sure it's stable.
 # - Certain attributes, like node.name, need to be modified by calling a function, not by directly setting the attribute. Identify others, and protect them with setter/getter decorators
 """A module containing the Tree and TreeNode class definitions, and functionality to parse, manipulate, and save phylogenetic trees in Newick, NEXUS, PhyloXML, or NeXML formats.
 
@@ -367,10 +368,8 @@ class Tree(object):
         self.path_dists = {}
         # # #  Public descriptive attributes
         self.is_cladogram = None # None means it hasn't been set; will be True or False.
-
         self.is_binary = None
         self.is_rooted = None
-
         # # #  Private attributes
         self._cladogram_branch = 1.0 # length of each branch in a cladogram
         self._remove_name_quotes = remove_name_quotes
@@ -1417,8 +1416,10 @@ class Tree(object):
             num_chld = len(node.children)
             num_children.setdefault(num_chld, []).append(node)
             if not node.children:
+                node.is_leaf = True
                 self.leaves.add(node)
             else:
+                node.is_leaf = False
                 self.internal.add(node)
                 if not node._been_processed and node.support:
                     try:
@@ -1565,6 +1566,7 @@ class TreeNode(object):
         self.support = None
         self.support_type = None
         self.comment = None
+        self.is_leaf = False
         self._been_processed = False
     def rename(self, new_name):
         if new_name == self.name:
@@ -1582,6 +1584,7 @@ class TreeNode(object):
         new_node.support = self.support
         new_node.support_type = self.support_type
         new_node.comment = self.comment
+        new_node.is_leaf = self.is_leaf
         new_node.children = self.children[::]
         new_node._been_processed = self._been_processed
         return new_node
