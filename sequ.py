@@ -219,6 +219,105 @@ def calcIdentity(sequence1, sequence2):
     percent = float(matches) / total * 100
     return percent, numStr
 
+def filter_unique(aln, to_keep=None, duplicate_names=False, return_replaced=False, compare_gaps=False, compare_terminal_stop=False, **kwargs):
+    """Sequentially parses aln (a list of Sequence objects, aligned or not), filtering out any with a sequence that has been seen before. Returns a list of filtered Sequence objects in the same order as in aln (except that sequences in `to_keep` will be moved to the location of the first identical non-to_keep sequence.
+    `to_keep` can be None or a sequence of strings representing sequence names to keep. If given, any such sequences will never be filtered whether their sequences are unique or not. These sequences will also be preferentially used to replace other identical sequences, over sequences not in `to_keep`. If none of a set of identical sequences are in `to_keep`, the one found earliest in the list will be kept.
+    If `duplicate_names` is False, a sequence object will be completely ignored if another sequence has already been encountered with the same name, no matter the sequence itself. This will also apply to any names in `to_keep`. If True, this second sequence will only be kept if its sequence is different from other sequences (unless it is in `to_keep`); if multiple sequences with the same name are to be kept, a "_DUPLICATE_X" counter tag will be added to the sequence name in the returned `replaced` dict (but not in the returned list of Sequence objects, so they may not match).
+    If `return_replaced` is True, this function will return a list of filtered Sequence objects and a dict. This dict describes the filtered sequences: {'kept_name':['filtered_name1', 'filtered_name2', ...], ...}. Every filtered sequence name will be present once in the values of this dict (except for sequences with identical names if `duplicate_names` is False), but a kept sequence will only be in the keys if it was identical to at least 1 filtered sequence.
+    If `compare_gaps` is False, gap characters will be removed for the sake of the comparison, but will still be present in the returned sequence objects. If True, the sequences will be compared exactly as they are.
+    If `compare_terminal_stop` is False, a single terminal "_" or "*" character will be removed for the sake of comparison, but will still be present in the returned sequence objects. If True, the sequences will be compared exactly as they are.
+    This function may safely be called with a dict of **kwargs containing unused arguments."""
+    # Formatting functions
+    def format_duplicate_name(name, cntr):
+        return f'{name}_DUPLICATE_{cntr}'
+    def format_sequence(seq_str):
+        if compare_gaps == False:
+            seq_str = seq_str.replace('-', '') # Remove gaps in case of ambiguous placement
+        if compare_terminal_stop == False and seq_str[-1] in ('_', '*'):
+            seq_str = seq_str[:-1]
+        return seq_str
+    
+    # Format argument
+    if not to_keep:
+        to_keep = set()
+    else:
+        to_keep = set(to_keep)
+    
+    # Get the important sequences first
+    names_cntr = {} # To track unique names
+    seqdict = {} # {"SEQUENCE":(kept_name, [filtered_name1, ...]), ...}
+    if to_keep:
+        for seq in aln:
+            seqname = seq.name
+            if seqname not in to_keep:
+                continue
+            # Unique names
+            dup_name = seqname in names_cntr
+            if dup_name:
+                if duplicate_names == False:
+                    continue
+            else:
+                names_cntr[seqname] = 1
+            # Get comparison sequence
+            compseq = format_sequence(seq.seq)
+            # Check for comparison sequence uniqueness
+            if compseq not in seqdict: # First occurance
+                if dup_name:
+                    dup_name = format_duplicate_name(seqname, names_cntr[seqname])
+                    seqdict[compseq] = (dup_name, []) # List tracks filtered seq names with same compseq
+                    names_cntr[seqname] += 1
+                else:
+                    seqdict[compseq] = (seqname, [])
+
+    # Identify unique & redundant sequences, filling out new_aln list
+    names_cntr = {} # Reset name counter
+    new_aln = [] # Final list of filtered sequence objects to return
+    for seq in aln:
+        seqname = seq.name
+        # Unique names
+        dup_name = seqname in names_cntr
+        if dup_name:
+            if duplicate_names == False:
+                continue
+        else:
+            names_cntr[seqname] = 1
+        
+        # Important sequence
+        if seqname in to_keep:
+            new_aln.append(seq) # Already processed above; don't need to count name
+            continue
+
+        # Get comparison sequence
+        compseq = format_sequence(seq.seq)
+        # Check for comparison sequence uniqueness
+        if compseq not in seqdict: # First occurance, keep it
+            if dup_name:
+                dup_name = format_duplicate_name(seqname, names_cntr[seqname])
+                seqdict[compseq] = (dup_name, []) # List tracks filtered seq names with same compseq
+                names_cntr[seqname] += 1
+            else:
+                seqdict[compseq] = (seqname, [])
+            new_aln.append(seq)
+        else: # Not first occurance, filter it
+            if dup_name:
+                dup_name = format_duplicate_name(seqname, names_cntr[seqname])
+                seqdict[compseq][1].append(dup_name)
+                names_cntr[seqname] += 1
+            else:
+                seqdict[compseq][1].append(seqname)
+    
+    # Return final objects
+    if return_replaced == True:
+        # Fill out replaced dict
+        replaced = {} # Record which sequences were filtered
+        for (kept_name, filtered_names) in seqdict.values():
+            if len(filtered_names) == 0: # Unique sequence, nothing filtered
+                continue
+            replaced[kept_name] = filtered_names
+        return new_aln, replaced
+    else:
+        return new_aln
+
 
 # # # # # # # # # #  Private Functions  # # # # # # # # # #
 def __chunksequence(sequence, chunksize, only_complete=False):
