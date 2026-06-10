@@ -9,7 +9,7 @@ Several modules written to handle molecular biology tasks.
    rosetta -- A package to run and parse various rosetta programs.
      Note that this package is not implicitly loaded with molecbio.
 """
-__version__ = '0.5'
+__version__ = '0.6.1'
 __author__ = 'Dave Curran (daves.binf.tools@gmail.com)'
 __all__ = ['PDB', 'Cluster', 'sequ', 'blosum', 'align', 'rosetta', 'aligners', 'phylo']
 
