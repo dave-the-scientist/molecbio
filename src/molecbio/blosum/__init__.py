@@ -13,8 +13,7 @@ an 'alphabet' attribute, listing all letters they contain, as well as the
     matrices -- A list containing the names of the above.
 """
 import os, math
-#from . import matrices
-import matrices
+from . import matrices
 
 
 class Blosum(dict):
