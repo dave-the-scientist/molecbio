@@ -33,9 +33,3 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
-
-# Archived & no longer maintained
-aligners/
-rosetta/
-rosettaApps/
-setup_OLD.py
