@@ -38,4 +38,4 @@ nosetests.xml
 aligners/
 rosetta/
 rosettaApps/
-setup.py
+setup_OLD.py
