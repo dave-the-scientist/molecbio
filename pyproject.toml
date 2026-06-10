@@ -10,8 +10,7 @@ authors = [{name="Dave Curran", email="daves.binf.tools@gmail.com"}, ]
 description = "A package to deal with some molecular biology tasks"
 readme = "README.md"
 requires-python = ">=3.5"
-license = "GPL-3.0-or-later"
-license-files = ["LICENSE"]
+license = {text = "GPL-3.0-or-later"}
 
 [project.urls]
 Homepage = "https://github.com/dave-the-scientist/molecbio"
