@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "molecbio"
-version = "0.6.1"
+dynamic = ["version"]
 dependencies = ["numpy>=1.24.4", "scipy>=1.6.0"]
 authors = [{name="Dave Curran", email="daves.binf.tools@gmail.com"}, ]
 description = "A package to deal with some molecular biology tasks"
@@ -14,3 +14,6 @@ license = {text = "GPL-3.0-or-later"}
 
 [project.urls]
 Homepage = "https://github.com/dave-the-scientist/molecbio"
+
+[tool.setuptools.dynamic]
+version = {attr = "molecbio.__version__"}
