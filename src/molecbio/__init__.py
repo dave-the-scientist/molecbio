@@ -14,6 +14,6 @@ Several modules written to handle molecular biology tasks.
 __version__ = '0.6.2'
 __all__ = ['align', 'blosum', 'Cluster', 'parseblastxml', 'PDB', 'phylo', 'sequ']
 
-import align, blosum, Cluster, parseblastxml, PDB, phylo, sequ
+from molecbio import align, blosum, Cluster, parseblastxml, PDB, phylo, sequ
 # when I rewrite this, include the alignment functionality from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/calculate_alignment_identity.py and the visualization functionality from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/analyze_hits.py and the blast sequence extraction from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/extract_sequences.py
 
