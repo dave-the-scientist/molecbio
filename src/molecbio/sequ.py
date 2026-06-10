@@ -4,6 +4,7 @@
 # # # # # # # # # # #
 
 # TODO:
+# Replace this with work/antigen_analysis/sequ.py once it's done. Probably a good idea to keep this file around, maybe as something like sequ_legacy.py so it can still be accessed.
 # When rewritten, would be great to also have a command line tool to do many common tasks.
 # - Like to remove empty sequence. Or remove non-unique sequences. Extract a portion of an alignment, etc.
 

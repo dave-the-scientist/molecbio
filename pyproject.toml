@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "molecbio"
 dynamic = ["version"]
-dependencies = ["numpy>=1.24.4", "scipy>=1.6.0"]
+dependencies = ["numpy>=1.24.4", "scipy>=1.6.0", "matplotlib>=3.0.0"]
 authors = [{name="Dave Curran", email="daves.binf.tools@gmail.com"}, ]
 description = "A package to deal with some molecular biology tasks"
 readme = "README.md"
