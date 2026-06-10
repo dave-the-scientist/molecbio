@@ -13,7 +13,8 @@ an 'alphabet' attribute, listing all letters they contain, as well as the
     matrices -- A list containing the names of the above.
 """
 import os, math
-from . import matrices
+#from . import matrices
+import matrices
 
 
 class Blosum(dict):
@@ -30,24 +31,31 @@ class Blosum(dict):
     def __initFromNcbiStr(self, matStr):
         minVal, maxVal = float('inf'), float('-inf')
         it = iter(matStr.splitlines())
+        # Extract attributes and find start of matrix values
         for line in it:
-            if line.strip().lower().endswith('bit units'):
-                bitFraction = line.rpartition('/')[2].split()[0]
-                self.lambda_value = math.log(2, math.e)/float(bitFraction)
+            line = line.lower()
+            if line.strip().endswith('bit units'):
+                num_str, _, denum_str = line.rpartition('/')
+                bit_fraction = int(num_str.split()[-1]) / int(denum_str.split()[0])
+                self.lambda_value = math.log(2, math.e) * bit_fraction
                 continue
-            if 'entropy' in line.lower() and 'expected' in line.lower():
+            if 'entropy' in line and 'expected' in line:
                 ent, _, exp = line.partition(',')
                 try:
                     self.entropy = float(ent[ent.index('=')+1:])
                     self.expected = float(exp[exp.index('=')+1:])
-                except ValueError: pass
+                except ValueError: 
+                    pass
                 continue
-            if line.startswith('#') or line == '\n': continue
+            if line.startswith('#') or line == '\n': 
+                continue
             headerLine = line.upper().split()
             self.alphabet = headerLine
             break
+        # Parse matrix values
         for line in it:
-            if not line.strip(): continue
+            if not line.strip(): 
+                continue
             line = line.split()
             c = line[0].upper()
             c_low = c.lower()
@@ -62,6 +70,7 @@ class Blosum(dict):
                 self[c2_low, c_low] = num
         self.min = minVal
         self.max = maxVal
+
 
 # # # # #  Constants  # # # # #
 blosum30 = Blosum(matrices.BLOSUM30)

@@ -45,6 +45,7 @@ Functions:
     -- loadfasta(filepath, onlyThese=[]) -- Takes a file path string, returns list of Sequences.
     -- savefasta(seqList, filepath) -- Saves list of Sequences to filepath.
     -- cleanfasta(filepath) -- Overwrites sequences at filepath, formatting them.
+    -- filter_unique(seqs, to_keep=None, duplicate_names=False, return_replaced=False, compare_gaps=False, compare_terminal_stop=False) -- Takes a list of Sequence objects, filtering out repeated sequences.
 
     Data functions:
     -- translate(sequence, unknownChar='?', stopcodonChar='_') -- Takes a string
