@@ -221,11 +221,12 @@ def calcIdentity(sequence1, sequence2):
     percent = float(matches) / total * 100
     return percent, numStr
 
-def filter_unique(seqs, to_keep=None, duplicate_names=False, return_replaced=False, compare_gaps=False, compare_terminal_stop=False, **kwargs):
+def filter_unique(seqs, to_keep=None, start=None, end=None, return_replaced=False, duplicate_names=False, compare_gaps=False, compare_terminal_stop=False, **kwargs):
     """Sequentially parses `seqs` (a list of Sequence objects, aligned or not), filtering out any with a sequence that has been seen before. Returns a list of filtered Sequence objects in the same order as in `seqs`, and optionally a dict of names indicating which sequences were filtered out.
     `to_keep` can be None or a sequence of strings representing sequence names to keep. If given, any such sequences will never be filtered whether their sequences are unique or not. These sequences will also be preferentially used to replace other identical sequences, over sequences not in `to_keep`. If none of a set of identical sequences are in `to_keep`, the one found earliest in the list will be kept.
-    If `duplicate_names` is False, a sequence object will be completely ignored if another sequence has already been encountered with the same name, no matter the sequence itself. This will also apply to any names in `to_keep`. If True, this second sequence will only be kept if its sequence is different from other sequences (unless it is in `to_keep`); if multiple sequences with the same name are to be kept, a "_DUPLICATE_X" counter tag will be added to the sequence name in the returned `replaced` dict (but not in the returned list of Sequence objects, so beware they may not match).
+    One or both of `start` and `end` can be given as ints, to define the portion of each sequence with which to make the uniqueness comparison; the returned list of Sequence objects will have their full sequences. These indices will be applied before any gaps or stop codons are removed from the sequence.
     If `return_replaced` is True, this function will return a list of filtered Sequence objects and a dict. This dict describes the filtered sequences: {'kept_name':['filtered_name1', 'filtered_name2', ...], ...}. Every filtered sequence name will be present once in the values of this dict (except for sequences with identical names if `duplicate_names` is False), but a kept sequence will only be in the keys if it was identical to at least 1 filtered sequence.
+    If `duplicate_names` is False, a sequence object will be completely ignored if another sequence has already been encountered with the same name, no matter the sequence itself. This will also apply to any names in `to_keep`. If True, this second sequence will only be kept if its sequence is different from other sequences (unless it is in `to_keep`); if multiple sequences with the same name are to be kept, a "_DUPLICATE_X" counter tag will be added to the sequence name in the returned `replaced` dict (but not in the returned list of Sequence objects, so beware they may not match).
     If `compare_gaps` is False, gap characters will be removed for the sake of the comparison, but will still be present in the returned sequence objects. If True, the sequences will be compared exactly as they are.
     If `compare_terminal_stop` is False, a single terminal "_" or "*" character will be removed for the sake of comparison, but will still be present in the returned sequence objects. If True, the sequences will be compared exactly as they are.
     This function may safely be called with a dict of **kwargs containing unused arguments."""
@@ -233,6 +234,7 @@ def filter_unique(seqs, to_keep=None, duplicate_names=False, return_replaced=Fal
     def format_duplicate_name(name, cntr):
         return f'{name}_DUPLICATE_{cntr}'
     def format_sequence(seq_str):
+        seq_str = seq_str[start:end]
         if compare_gaps == False:
             seq_str = seq_str.replace('-', '') # Remove gaps in case of ambiguous placement
         if compare_terminal_stop == False and seq_str[-1] in ('_', '*'):
