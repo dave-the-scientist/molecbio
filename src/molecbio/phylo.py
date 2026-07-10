@@ -1,12 +1,3 @@
-# TODO
-#- CANNOT save some large trees; hitting recursion limit in format_newick_string(). Need to reformat this function, likely using the order from get_ordered_nodes(). 
-#- To open a tree in Figtree that has support values, the tree must be saved with internal_names and support_as_comment set to False. Make this parameter set the default? Could be enough to have internal_names set to False by default, and only switch default to true if a tree is read that contains internal names.
-#- Reformat the below description, so that new methods start with '-', and the extra text starts with an indent.
-#- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
-#- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
-# - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking "node in self.leaves". resetting and copying and processing functions for nodes may have to account for it
-#   - I've implemented node.is_leaf to do this, set in process_tree_nodes(); need to test it after loading different tree formats, copying, rooting, re-ordering, etc. make sure it's stable.
-# - Certain attributes, like node.name, need to be modified by calling a function, not by directly setting the attribute. Identify others, and protect them with setter/getter decorators
 """A module containing the Tree and TreeNode class definitions, and functionality to parse, manipulate, and save phylogenetic trees in Newick, NEXUS, PhyloXML, or NeXML formats.
 
 Input/Output
@@ -151,6 +142,16 @@ This module expects node names to be unique. If two nodes have the same name, th
 Some functions will print warnings or other information during execution that are designed to be useful for a user working with this module in simple scripts or in the interpreter. To suppress these messages, import this module and then set 'phylo.verbose' to False.
 """
 
+# TODO
+#- CANNOT save some large trees; hitting recursion limit in format_newick_string(). Need to reformat this function, likely using the order from get_ordered_nodes(). 
+#- To open a tree in Figtree that has support values, the tree must be saved with internal_names and support_as_comment set to False. Make this parameter set the default? Could be enough to have internal_names set to False by default, and only switch default to true if a tree is read that contains internal names.
+#- Reformat the below description, so that new methods start with '-', and the extra text starts with an indent.
+#- set_cladogram() should probably return a new tree instead of modifying in place, and rename to as_cladogram() or something like that were the name indicates a new tree will be returned (is there a naming convention I can use for all methods that return a new tree?)
+#- For a cladogram, there should be a way to save the file including the default distances as branch lengths (maybe not totally correct, but still useful)
+# - Nodes should have an attribute indicating if they're terminal leaves or not. Functions should use that instead of checking "node in self.leaves". resetting and copying and processing functions for nodes may have to account for it
+#   - I've implemented node.is_leaf to do this, set in process_tree_nodes(); need to test it after loading different tree formats, copying, rooting, re-ordering, etc. make sure it's stable.
+# - Certain attributes, like node.name, need to be modified by calling a function, not by directly setting the attribute. Identify others, and protect them with setter/getter decorators
+
 # Developer notes:
 # All parsing functions must call self.reset_nodes(), then use self.new_tree_node() to create nodes, and finally set one as self.root.
 # All nodes must have their .parent and .children attributes set. All nodes should have their .name, .branch, .support, .support_type, and .comment attributes filled if possible, though all are optional.
@@ -158,17 +159,25 @@ Some functions will print warnings or other information during execution that ar
 # self.process_tree_nodes() must be called after adding or removing a batch of nodes.
 
 
-import re, operator, itertools
+import sys, re, operator
 import os.path
 import xml.etree.ElementTree as ET
-from collections import OrderedDict
 import numpy as np
+from itertools import combinations
+from collections import OrderedDict
 
-verbose = True
 
-def process_path(file_path):
-    return os.path.abspath(os.path.expanduser(os.path.normpath(file_path)))
+# # # Module-level attributes
+# Control whether to print warnings or info. By default set to True if this is run in an interactive session or run from the command line or run by IPython/Jupyter, and to False if imported by a script. Can be explicitly set after import by the user.
+main_mod = sys.modules.get('__main__')
+if main_mod and hasattr(main_mod, '__file__') and __name__ != '__main__': # Imported by a script
+    verbose = False
+else: # Interactive session, Jupyter notebook, or run from command line
+    verbose = True
 
+
+# # #  I/O functions
+# #  General loading functions that identify file format automatically
 def load_tree(tree_filename, internal_as_names=False, **kwargs):
     with open(process_path(tree_filename)) as f:
         tree_string = f.read()
@@ -186,7 +195,7 @@ def load_tree_string(tree_string, internal_as_names=False, **kwargs):
         return load_newick_string(tree_string, internal_as_names, **kwargs)
     else:
         return None
-
+# #  Newick
 def load_newick(tree_filename, internal_as_names=False, **kwargs):
     with open(process_path(tree_filename)) as f:
         tree_string = f.read()
@@ -195,7 +204,7 @@ def load_newick_string(tree_string, internal_as_names=False, **kwargs):
     tree = Tree(**kwargs)
     tree.parse_newick(tree_string, internal_as_names)
     return tree
-
+# #  NEXUS
 def load_nexus(tree_filename, internal_as_names=False, **kwargs):
     with open(process_path(tree_filename)) as f:
         tree_string = f.read()
@@ -259,7 +268,7 @@ def multiple_nexus_string(trees, translate_command=False, support_as_comment=Fal
         nexus_buff.append('{}Tree {} = {}'.format(indent, tree_name, newick_str))
     nexus_buff.append('END;')
     return '\n'.join(nexus_buff)
-
+# #  PhyloXML
 def load_phyloxml(tree_filename, **kwargs):
     with open(process_path(tree_filename)) as f:
         tree_string = f.read()
@@ -297,7 +306,7 @@ def multiple_phyloxml_string(trees, support_values=True, comments=True, internal
         except PhyloUniqueNameError as err:
             raise PhyloUniqueNameError(str(err))
     return ET.tostring(e_tree, encoding='UTF-8', method='xml').decode()
-
+# #  NeXML
 def load_nexml(tree_filename, **kwargs):
     with open(process_path(tree_filename)) as f:
         tree_string = f.read()
@@ -345,8 +354,12 @@ def multiple_nexml_string(trees, support_values=True, comments=True, internal_na
         tree_ids.add(tree_id)
         tree.add_nexml_nodes_edges(trees_e, tree_id, node_ids, replacer_fxn, support_values, comments, internal_names, max_name_length)
     return ET.tostring(e_tree, encoding='UTF-8', method='xml').decode()
+# #  Misc functions
+def process_path(file_path):
+    return os.path.abspath(os.path.expanduser(os.path.normpath(file_path)))
 
 
+# # #  Major classes
 class Tree(object):
     # # #  Restricted character sets
     _newick_replacements = {'(':'', ')':'', ',':'', ':':'', '[':'', ']':'', ';':'.', ' ':'_', '\t':'_', '\n':''} # Applied to node names, not comments
@@ -702,11 +715,11 @@ class Tree(object):
             i = min(len(self.paths[node1]), len(self.paths[node2]))
         return sum(self.path_dists[node1][i:]) + sum(self.path_dists[node2][i:])
     def get_distance_matrix(self):
-        """Returns a sorted list of strings, and a 2D Numpy array. The phylogenetic distance between tree leaves i and j from 'names' is found by 'dist_mat[i,j]'."""
+        """Returns a sorted list of strings, and a 2D Numpy array. The phylogenetic distance between tree leaves i and j from 'names' is found by 'dist_mat[i,j]'. No claims are made about whether phylogenetic distances constitute a true mathematical distance metric, but they may still be useful."""
         names = self.get_named_leaves()
         num_names = len(names)
         dist_mat = np.zeros((num_names, num_names), dtype='float')
-        for i, j in itertools.combinations(range(num_names), 2):
+        for i, j in combinations(range(num_names), 2):
             node1, node2 = self.node_names[names[i]], self.node_names[names[j]]
             dist = self.node_distance(node1, node2)
             dist_mat[i,j] = dist
@@ -1596,7 +1609,8 @@ class TreeNode(object):
     def __repr__(self):
         return '<phylo.TreeNode id={} at {}>'.format(self.id, hex(id(self)))
 
-# # #  Phylo errors
+
+# # #  Module error classes
 class PhyloError(Exception):
     """Base class for errors originating from this phylo module."""
     def __init__(self, msg=None):

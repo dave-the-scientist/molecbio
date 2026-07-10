@@ -11,10 +11,10 @@ Several modules written to handle molecular biology tasks.
    sequ -- Functions for DNA/protein sequences, alignments, etc.
 
 """
-__version__ = '0.6.2'
+__version__ = '0.7.0'
 __all__ = ['align', 'blosum', 'Cluster', 'parseblastxml', 'PDB', 'phylo', 'sequ']
 
 from molecbio import align, blosum, Cluster, parseblastxml, PDB, phylo, sequ
 
 # when I rewrite this, include the visualization functionality from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/analyze_hits.py and the blast sequence extraction from /home/dave/Desktop/work/p_multocida_slp_diversity/strain_prevalence/extract_sequences.py
-
+# Move the Cluster functionality into PDB
